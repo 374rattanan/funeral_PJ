@@ -165,27 +165,19 @@ export default function AdminLayout() {
             <button
               onClick={refreshFromSupabase}
               disabled={isLoadingDb}
-              title="คลิกเพื่อดึงข้อมูลล่าสุดจากฐานข้อมูล Supabase"
+              title="คลิกเพื่อซิงก์ข้อมูลล่าสุดจากฐานข้อมูล"
               className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 border transition ${
                 supabaseConnected
                   ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
-                  : 'bg-amber-50 text-amber-800 border-amber-300'
+                  : 'bg-stone-100 text-stone-700 border-stone-300'
               }`}
             >
-              <span className={`w-2 h-2 rounded-full ${supabaseConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+              <span className={`w-2 h-2 rounded-full ${supabaseConnected ? 'bg-emerald-500 animate-pulse' : 'bg-stone-400'}`} />
               {isLoadingDb
-                ? 'กำลังซิงก์ Supabase...'
+                ? 'กำลังซิงก์ข้อมูล...'
                 : supabaseConnected
-                  ? 'เชื่อมต่อ Supabase (100% Sync)'
-                  : 'โหมด Local (กำลังเชื่อม DB)'}
-            </button>
-
-            <button
-              onClick={handleReset}
-              className="px-3 py-1.5 rounded-lg border border-stone-300 bg-white hover:bg-stone-100 text-xs font-medium text-stone-700 flex items-center gap-1.5"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              รีเซ็ตข้อมูลเริ่มต้น
+                  ? 'ฐานข้อมูลออนไลน์'
+                  : 'ซิงก์ข้อมูลล่าสุด'}
             </button>
 
             {/* กระดิ่งแจ้งเตือน */}

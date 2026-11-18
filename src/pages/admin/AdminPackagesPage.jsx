@@ -31,8 +31,14 @@ export default function AdminPackagesPage() {
   const [openCatId, setOpenCatId] = useState(1);
 
   const handleCreateNewPackage = () => {
+    const maxNum = packages.reduce((max, p) => {
+      const n = parseInt(String(p.id || '').replace(/\D/g, ''), 10);
+      return Number.isFinite(n) && n > max ? n : max;
+    }, 0);
+    const nextId = `PKG-${String(maxNum + 1).padStart(2, '0')}`;
+
     setEditingPkg({
-      id: `PKG-0${packages.length + 1}`,
+      id: nextId,
       name: '',
       tagline: '',
       targetGroup: 'ครอบครัวขนาดกลาง',

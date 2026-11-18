@@ -777,26 +777,64 @@ export async function syncDepartmentTaskToSupabase(task) {
 
 // 6.1 แพ็กเกจ (PACKAGES)
 export async function syncSavePackageToSupabase(pkg) {
-  if (!isSupabaseConfigured || !supabase || !pkg) return;
+  if (!isSupabaseConfigured || !supabase || !pkg) return { ok: false, reason: 'not_configured' };
   try {
-    await supabase.from('packages').upsert({
+    // ชุดคอลัมน์มาตรฐานตาม 2_insert_master_data.sql
+    const basePayload = {
       package_id: pkg.id,
       package_name: pkg.name,
       overview_description: pkg.tagline || '',
-      target_group: pkg.targetGroup || '',
+      target_group: pkg.targetGroup || 'ครอบครัวขนาดกลาง',
       base_price: Number(pkg.price) || 0,
-      duration: pkg.durationText || `${pkg.durationDays} วัน ${pkg.durationNights} คืน`,
       duration_days: Number(pkg.durationDays) || 3,
       duration_nights: Number(pkg.durationNights) || 2,
       base_guests: Number(pkg.baseGuests) || 50,
-      max_guests: Number(pkg.maxGuests) || 100,
+      max_guests: Number(pkg.maxGuests) || (Number(pkg.baseGuests) || 50) + 50,
       default_ritual_id: ritualIdToInt(pkg.defaultRitualId),
       is_recommended: Boolean(pkg.isRecommended),
       cover_image_url: pkg.coverImage || '',
-      status: 'ใช้งาน'
-    }, { onConflict: 'package_id' });
+      status: 'เปิดใช้งาน'
+    };
+
+    let { error } = await supabase
+      .from('packages')
+      .upsert(basePayload, { onConflict: 'package_id' });
+
+    // Fallback 1: กรณีติด Foreign Key ของ default_ritual_id
+    if (error) {
+      console.warn('⚠️ Upsert packages รอบที่ 1 ติดปัญหา กำลังลองบันทึกด้วย Payload สำรอง (1):', error.message);
+      const fallback1 = { ...basePayload, default_ritual_id: null };
+      const retry1 = await supabase.from('packages').upsert(fallback1, { onConflict: 'package_id' });
+      error = retry1.error;
+    }
+
+    // Fallback 2: กรณีตาราง packages ใน Supabase มีเฉพาะคอลัมน์หลัก
+    if (error) {
+      console.warn('⚠️ Upsert packages รอบที่ 2 ติดปัญหา กำลังลองบันทึกด้วยคอลัมน์หลัก (2):', error.message);
+      const minimalPayload = {
+        package_id: pkg.id,
+        package_name: pkg.name,
+        overview_description: pkg.tagline || '',
+        base_price: Number(pkg.price) || 0,
+        duration_days: Number(pkg.durationDays) || 3,
+        duration_nights: Number(pkg.durationNights) || 2,
+        base_guests: Number(pkg.baseGuests) || 50,
+        is_recommended: Boolean(pkg.isRecommended)
+      };
+      const retry2 = await supabase.from('packages').upsert(minimalPayload, { onConflict: 'package_id' });
+      error = retry2.error;
+    }
+
+    if (error) {
+      console.error('❌ บันทึกแพ็กเกจลง Supabase ไม่สำเร็จ:', error.message, error);
+      return { ok: false, error };
+    }
+
+    console.log(`✅ บันทึกแพ็กเกจ ${pkg.id} (${pkg.name}) ลง Supabase สำเร็จ!`);
+    return { ok: true };
   } catch (err) {
     console.warn('Error saving package to Supabase:', err);
+    return { ok: false, error: err };
   }
 }
 
