@@ -150,16 +150,45 @@ export const AppProvider = ({ children }) => {
           dbData = await fetchAllDataFromSupabase() || dbData;
         }
 
-        setState(prev => ({
-          ...prev,
-          departments: dbData.departments?.length > 0 ? dbData.departments : prev.departments,
-          staff: dbData.staff?.length > 0 ? dbData.staff : prev.staff,
-          locations: dbData.locations?.length > 0 ? dbData.locations : prev.locations,
-          packages: dbData.packages?.length > 0 ? dbData.packages : prev.packages,
-          services: dbData.services?.length > 0 ? dbData.services : prev.services,
-          bookings: dbData.bookings?.length > 0 ? dbData.bookings : prev.bookings,
-          assignments: dbData.assignments?.length > 0 ? dbData.assignments : prev.assignments
-        }));
+        setState(prev => {
+          let mergedPackages = prev.packages;
+          if (dbData.packages?.length > 0) {
+            const dbPkgIds = new Set(dbData.packages.map(p => p.id));
+            // ซิงก์แพ็กเกจที่สร้างไว้ในเครื่องแต่ยังไม่ได้ขึ้น Supabase ให้อัตโนมัติ
+            const unsyncedLocalPkgs = (prev.packages || []).filter(
+              lp => lp.id && !dbPkgIds.has(lp.id) && !INITIAL_PACKAGES.some(ip => ip.id === lp.id)
+            );
+            unsyncedLocalPkgs.forEach(lp => {
+              syncSavePackageToSupabase(lp);
+            });
+
+            mergedPackages = [
+              ...dbData.packages.map(dbPkg => {
+                const localMatch = (prev.packages || []).find(lp => lp.id === dbPkg.id);
+                return localMatch
+                  ? {
+                      ...localMatch,
+                      ...dbPkg,
+                      categories10: localMatch.categories10 || dbPkg.categories10,
+                      highlights: localMatch.highlights || dbPkg.highlights
+                    }
+                  : dbPkg;
+              }),
+              ...unsyncedLocalPkgs
+            ];
+          }
+
+          return {
+            ...prev,
+            departments: dbData.departments?.length > 0 ? dbData.departments : prev.departments,
+            staff: dbData.staff?.length > 0 ? dbData.staff : prev.staff,
+            locations: dbData.locations?.length > 0 ? dbData.locations : prev.locations,
+            packages: mergedPackages,
+            services: dbData.services?.length > 0 ? dbData.services : prev.services,
+            bookings: dbData.bookings?.length > 0 ? dbData.bookings : prev.bookings,
+            assignments: dbData.assignments?.length > 0 ? dbData.assignments : prev.assignments
+          };
+        });
         console.log('✅ ซิงก์ข้อมูลจาก Supabase ครบ 100% สำเร็จ!');
       }
     } catch (err) {
@@ -458,18 +487,31 @@ export const AppProvider = ({ children }) => {
   };
 
   // การจัดการแพ็กเกจหลัก (Admin CRUD -> ซิงก์ลงตาราง packages)
-  const savePackage = (pkgData) => {
+  const savePackage = async (pkgData) => {
+    const exists = state.packages.some(p => p.id === pkgData.id);
+    const maxNum = state.packages.reduce((max, p) => {
+      const n = parseInt(String(p.id || '').replace(/\D/g, ''), 10);
+      return Number.isFinite(n) && n > max ? n : max;
+    }, 0);
+    const nextId = `PKG-${String(maxNum + 1).padStart(2, '0')}`;
+
+    const savedPkg = exists
+      ? pkgData
+      : { ...pkgData, id: pkgData.id || nextId };
+
     setState(prev => {
-      const exists = prev.packages.some(p => p.id === pkgData.id);
-      const savedPkg = exists
-        ? pkgData
-        : { ...pkgData, id: `PKG-0${prev.packages.length + 1}` };
-      const packages = exists
-        ? prev.packages.map(p => (p.id === pkgData.id ? savedPkg : p))
+      const alreadyInState = prev.packages.some(p => p.id === savedPkg.id);
+      const packages = alreadyInState
+        ? prev.packages.map(p => (p.id === savedPkg.id ? savedPkg : p))
         : [...prev.packages, savedPkg];
-      syncSavePackageToSupabase(savedPkg);
       return { ...prev, packages };
     });
+
+    const res = await syncSavePackageToSupabase(savedPkg);
+    if (res && !res.ok && res.error) {
+      console.error('ไม่สามารถซิงก์แพ็กเกจลง Supabase:', res.error);
+    }
+    return savedPkg;
   };
 
   const deletePackage = (pkgId) => {

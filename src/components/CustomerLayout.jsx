@@ -1,76 +1,37 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Phone, MapPin, ShieldCheck, Wrench, RotateCcw, Facebook, MessageCircle } from 'lucide-react';
+import { Phone, MapPin, ShieldCheck, Wrench, Facebook, MessageCircle, Lock, X } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 
 export default function CustomerLayout() {
-  const { resetDemoData, bookings } = useApp();
-  const { loginAsAdmin, loginAsDepartment } = useAuth();
+  const { departments, staff } = useApp();
+  const { user, loginAsAdmin, loginAsDepartment } = useAuth();
   const navigate = useNavigate();
 
-  const pendingCount = bookings.filter(b => b.status === 'รออนุมัติ').length;
+  const [showStaffModal, setShowStaffModal] = useState(false);
+  const [loginRole, setLoginRole] = useState('ADMIN'); // 'ADMIN' | 'DEPARTMENT'
+  const [username, setUsername] = useState('admin');
+  const [password, setPassword] = useState('123456');
+  const [selectedDept, setSelectedDept] = useState(departments?.[0] || 'ฝ่ายสถานที่');
 
-  const handleGoAdmin = () => {
-    loginAsAdmin();
-    navigate('/admin');
-  };
-
-  const handleGoDept = () => {
-    loginAsDepartment('ฝ่ายสถานที่', 'ป้าฝ้าย ใจดี');
-    navigate('/department');
-  };
-
-  const handleReset = () => {
-    if (window.confirm('ต้องการรีเซ็ตข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้น (Demo Data) ใช่หรือไม่?')) {
-      resetDemoData();
-      window.location.reload();
+  const handleStaffLoginSubmit = (e) => {
+    e.preventDefault();
+    setShowStaffModal(false);
+    if (loginRole === 'ADMIN') {
+      loginAsAdmin(username || 'admin');
+      navigate('/admin');
+    } else {
+      const deptStaff = (staff || []).find(s => s.department === selectedDept);
+      const staffFullName = deptStaff ? `${deptStaff.prefix || ''}${deptStaff.fullName}` : `เจ้าหน้าที่${selectedDept}`;
+      loginAsDepartment(selectedDept, staffFullName);
+      navigate('/department');
     }
   };
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FDFBF7] text-stone-800">
-      {/* แถบสลับ Portal สำหรับทดสอบระบบ 3 ฝั่ง */}
-      <div className="bg-[#353432] text-stone-200 text-xs py-2 px-4 border-b border-stone-700">
-        <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <span className="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
-            <span className="font-medium text-amber-200">โหมดทดสอบระบบ 3 Portals (Real-time LocalStorage):</span>
-            <span className="text-stone-300 hidden sm:inline">ขณะนี้คุณอยู่ที่ <strong>ฝั่งลูกค้า (Public)</strong></span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleGoAdmin}
-              className="px-2.5 py-1 rounded bg-amber-600/90 hover:bg-amber-500 text-white font-medium flex items-center gap-1 transition"
-            >
-              <ShieldCheck className="w-3.5 h-3.5" />
-              เข้าฝั่งแอดมิน (Admin)
-              {pendingCount > 0 && (
-                <span className="ml-1 px-1.5 py-0.2 bg-red-600 text-white rounded-full text-[10px]">
-                  {pendingCount}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={handleGoDept}
-              className="px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-medium flex items-center gap-1 transition"
-            >
-              <Wrench className="w-3.5 h-3.5" />
-              เข้าฝั่งแผนกปฏิบัติงาน (Department)
-            </button>
-            <button
-              onClick={handleReset}
-              className="px-2.5 py-1 rounded bg-stone-700 hover:bg-stone-600 text-stone-200 flex items-center gap-1 transition"
-              title="รีเซ็ตข้อมูลเริ่มต้น"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span className="hidden md:inline">รีเซ็ตข้อมูลเริ่มต้น</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Navbar หลักตามรูปดีไซน์ */}
+      {/* Navbar หลักตามรูปดีไซน์ (ไม่มีแถบโหมดทดสอบสีดำ) */}
       <header className="sticky top-0 z-40 bg-[#FAF6EE]/95 backdrop-blur border-b border-[#E8DEC8]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3">
@@ -83,7 +44,7 @@ export default function CustomerLayout() {
             </div>
           </Link>
 
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-stone-700">
+          <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-stone-700">
             <NavLink
               to="/"
               end
@@ -123,6 +84,15 @@ export default function CustomerLayout() {
             >
               ตรวจสอบการจัดงาน
             </NavLink>
+
+            <button
+              type="button"
+              onClick={() => setShowStaffModal(true)}
+              className="ml-2 px-3.5 py-2 rounded-xl border border-[#D5C7AD] bg-white hover:bg-[#F5EFE2] text-stone-700 hover:text-[#7C6032] text-xs font-semibold flex items-center gap-1.5 shadow-sm transition"
+            >
+              <Lock className="w-3.5 h-3.5 text-[#9B7B45]" />
+              {user ? 'ระบบเจ้าหน้าที่' : 'สำหรับเจ้าหน้าที่'}
+            </button>
           </nav>
 
           <div className="flex md:hidden items-center gap-2 text-xs">
@@ -132,6 +102,14 @@ export default function CustomerLayout() {
             <Link to="/check-status" className="px-3 py-1.5 rounded-lg border border-stone-300 text-stone-700 font-medium">
               เช็กสถานะ
             </Link>
+            <button
+              type="button"
+              onClick={() => setShowStaffModal(true)}
+              className="p-1.5 rounded-lg border border-stone-300 bg-white text-stone-700"
+              title="สำหรับเจ้าหน้าที่"
+            >
+              <Lock className="w-4 h-4 text-[#9B7B45]" />
+            </button>
           </div>
         </div>
       </header>
@@ -151,6 +129,14 @@ export default function CustomerLayout() {
                 จัดงานศพแบบครบวงจร ที่ดูแลด้วยใจ<br />
                 โดยคนในชุมชน เพื่อคนสำคัญของคุณ
               </p>
+              <button
+                type="button"
+                onClick={() => setShowStaffModal(true)}
+                className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-[#9B7B45] hover:underline"
+              >
+                <Lock className="w-3.5 h-3.5" />
+                เข้าสู่ระบบสำหรับเจ้าหน้าที่
+              </button>
             </div>
 
             <div className="md:border-r md:border-stone-300 md:px-6">
@@ -188,6 +174,120 @@ export default function CustomerLayout() {
           </div>
         </div>
       </footer>
+
+      {/* Modal เข้าสู่ระบบสำหรับเจ้าหน้าที่ (Admin & ฝ่ายปฏิบัติงาน) */}
+      {showStaffModal && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 border border-[#E6DAC3] shadow-2xl relative">
+            <button
+              type="button"
+              onClick={() => setShowStaffModal(false)}
+              className="absolute top-5 right-5 p-1.5 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="text-center mb-6">
+              <div className="w-12 h-12 rounded-2xl bg-[#FAF5EC] border border-[#E6DAC3] flex items-center justify-center mx-auto mb-3 text-[#9B7B45]">
+                <Lock className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-stone-900">เข้าสู่ระบบสำหรับเจ้าหน้าที่</h3>
+              <p className="text-xs text-stone-500 mt-1">วิสาหกิจชุมชนบ้านวิเวก ต.หนองหาร อ.สันทราย จ.เชียงใหม่</p>
+            </div>
+
+            {/* สลับบทบาท: แอดมินศูนย์บริการ vs ฝ่ายปฏิบัติงาน */}
+            <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-stone-100 mb-5">
+              <button
+                type="button"
+                onClick={() => setLoginRole('ADMIN')}
+                className={`py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition ${
+                  loginRole === 'ADMIN'
+                    ? 'bg-white text-stone-900 shadow-xs'
+                    : 'text-stone-500 hover:text-stone-800'
+                }`}
+              >
+                <ShieldCheck className="w-4 h-4 text-[#9B7B45]" />
+                ผู้ดูแลระบบ (Admin)
+              </button>
+              <button
+                type="button"
+                onClick={() => setLoginRole('DEPARTMENT')}
+                className={`py-2 px-3 rounded-lg text-xs font-bold flex items-center justify-center gap-1.5 transition ${
+                  loginRole === 'DEPARTMENT'
+                    ? 'bg-white text-stone-900 shadow-xs'
+                    : 'text-stone-500 hover:text-stone-800'
+                }`}
+              >
+                <Wrench className="w-4 h-4 text-[#2E5A44]" />
+                ฝ่ายปฏิบัติงาน
+              </button>
+            </div>
+
+            <form onSubmit={handleStaffLoginSubmit} className="space-y-4">
+              {loginRole === 'ADMIN' ? (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-stone-700 mb-1">ชื่อผู้ใช้งาน (Username)</label>
+                    <input
+                      type="text"
+                      required
+                      value={username}
+                      onChange={e => setUsername(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 text-sm focus:outline-none focus:border-[#9B7B45]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-stone-700 mb-1">รหัสผ่าน (Password)</label>
+                    <input
+                      type="password"
+                      required
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 text-sm focus:outline-none focus:border-[#9B7B45]"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className="block text-xs font-semibold text-stone-700 mb-1">เลือกฝ่ายปฏิบัติงาน</label>
+                    <select
+                      value={selectedDept}
+                      onChange={e => setSelectedDept(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 text-sm focus:outline-none focus:border-[#2E5A44]"
+                    >
+                      {(departments || []).map(dept => (
+                        <option key={dept} value={dept}>{dept}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-stone-700 mb-1">รหัสผ่านประจำฝ่าย</label>
+                    <input
+                      type="password"
+                      required
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 text-sm focus:outline-none focus:border-[#2E5A44]"
+                    />
+                  </div>
+                </>
+              )}
+
+              <button
+                type="submit"
+                className={`w-full py-3 rounded-xl text-white font-bold text-sm shadow-md transition ${
+                  loginRole === 'ADMIN'
+                    ? 'bg-[#9B7B45] hover:bg-[#846738]'
+                    : 'bg-[#2E5A44] hover:bg-[#234635]'
+                }`}
+              >
+                {loginRole === 'ADMIN' ? 'เข้าสู่ระบบผู้ดูแลระบบ' : `เข้าสู่ระบบ (${selectedDept})`}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
