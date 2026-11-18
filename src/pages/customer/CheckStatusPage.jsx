@@ -179,7 +179,7 @@ export default function CheckStatusPage() {
         sublines: [ritualTask?.status || 'รอดำเนินการ'],
         dateText: formatThaiDate(booking.startDate),
         timeText: '19:00 น.',
-        personText: `ผู้รับผิดชอบ : ฝ่ายพิธีการ (${ritualTask?.staffName || 'ป้าหวาย'})`,
+        personText: `ผู้รับผิดชอบ : ฝ่ายพิธีการและศาสนา (${ritualTask?.staffName || 'ป้าหวาย'})`,
         status: !isApproved
           ? 'รอดำเนินงาน'
           : ritualTask?.status === 'เสร็จสิ้น'
