@@ -47,9 +47,9 @@ const mapCategoryNameToId = (categoryName = '') => {
   return 10;
 };
 
-// ============================================================================
+
 // 0. ตรวจสอบบัญชีเข้าสู่ระบบกับตาราง users_auth บน Supabase
-// ============================================================================
+
 export async function authenticateUserFromSupabase(username, password) {
   if (!isSupabaseConfigured || !supabase || !username) {
     return { ok: false, offline: true };
@@ -108,9 +108,9 @@ export async function authenticateUserFromSupabase(username, password) {
   }
 }
 
-// ============================================================================
+
 // 1. ดึงข้อมูลทั้งหมดจาก Supabase ตอนเปิดเว็บ (Full Read / Hydration)
-// ============================================================================
+
 export async function fetchAllDataFromSupabase() {
   if (!isSupabaseConfigured || !supabase) return null;
 
