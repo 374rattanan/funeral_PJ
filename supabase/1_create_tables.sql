@@ -273,7 +273,7 @@ CREATE TABLE IF NOT EXISTS public.payments (
     payment_id VARCHAR(50) PRIMARY KEY,
     funeral_id INT NOT NULL REFERENCES public.funerals(funeral_id) ON DELETE CASCADE,
     installment_no INT NOT NULL CHECK (installment_no IN (1, 2)),
-    percentage INT DEFAULT 100,
+    installment_percent INT DEFAULT 100,
     paid_amount NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
     payment_method VARCHAR(100) DEFAULT 'โอนเงินผ่านธนาคาร',
     reference_number VARCHAR(100),
@@ -399,7 +399,9 @@ BEGIN
     END IF;
 
     UPDATE public.packages
-    SET is_recommended = (package_id = v_top_package_id);
+    SET is_recommended = (package_id = v_top_package_id)
+    WHERE package_id IS NOT NULL
+      AND is_recommended IS DISTINCT FROM (package_id = v_top_package_id);
 
     RETURN NULL;
 END;

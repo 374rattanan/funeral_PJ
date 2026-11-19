@@ -1,20 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { CheckCircle2, FileDown, ArrowLeft } from 'lucide-react';
+import { CheckCircle2, FileDown, ArrowLeft, AlertCircle } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { buildFullScheduleItems } from '../../data/initialData';
+import { SITE_CONFIG } from '../../config/siteConfig';
 
 export default function PackageDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { packages, services, ritualTypes } = useApp();
 
-  const pkg = packages.find(p => p.id === id) || packages[2] || packages[0];
+  const pkg = packages.find(p => p.id === id) || null;
   const [viewMode, setViewMode] = useState('SUMMARY_10'); // 'SUMMARY_10' | 'FULL_TABLE'
   const [activeTab, setActiveTab] = useState('INCLUDED'); // 'INCLUDED' | 'ADDONS'
   const [selectedRitualId, setSelectedRitualId] = useState(pkg?.defaultRitualId || 'RITUAL-02');
 
-  if (!pkg) return null;
+  useEffect(() => {
+    if (pkg?.defaultRitualId) {
+      setSelectedRitualId(pkg.defaultRitualId);
+    }
+  }, [pkg?.id, pkg?.defaultRitualId]);
+
+  if (!pkg) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-16">
+        <div className="bg-white rounded-3xl p-8 border border-[#E6DAC3] text-center space-y-4">
+          <AlertCircle className="w-12 h-12 text-amber-600 mx-auto" />
+          <h1 className="text-xl font-bold text-stone-900">ไม่พบแพ็กเกจจัดงานที่ระบุ</h1>
+          <p className="text-sm text-stone-600">แพ็กเกจนี้อาจถูกปิดให้บริการหรือไม่มีอยู่ในระบบ</p>
+          <Link
+            to="/packages"
+            className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-[#2E5A44] text-white text-sm font-semibold"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            ดูแพ็กเกจทั้งหมด
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   const scheduleGroups = buildFullScheduleItems(pkg.id);
 
@@ -26,18 +50,18 @@ export default function PackageDetailPage() {
     return acc;
   }, {});
 
-  // คำนวณส่วนต่างกรณีเลือกพิธีกรรมนอกแพ็กเกจ
+  // คำนวณส่วนต่างกรณีเลือกพิธีกรรมนอกแพ็กเกจจากข้อมูล ritualTypes จริง
   const getRitualUpgradeCost = (ritualId) => {
     if (ritualId === pkg.defaultRitualId) return 0;
-    if (pkg.defaultRitualId === 'RITUAL-03') {
-      if (ritualId === 'RITUAL-02') return 3500;
-      if (ritualId === 'RITUAL-01') return 8500;
-    }
-    if (pkg.defaultRitualId === 'RITUAL-02') {
-      if (ritualId === 'RITUAL-01') return 5000;
-    }
+    const targetRitual = (ritualTypes || []).find(r => r.id === ritualId);
+    if (!targetRitual) return 0;
+    if (pkg.defaultRitualId === 'RITUAL-03') return Number(targetRitual.upgradePriceFrom3) || 0;
+    if (pkg.defaultRitualId === 'RITUAL-02') return Number(targetRitual.upgradePriceFrom2) || 0;
     return 0;
   };
+
+  const selectedUpgradeCost = getRitualUpgradeCost(selectedRitualId);
+  const displayPrice = (Number(pkg.price) || 0) + selectedUpgradeCost;
 
   const handleSelectPackage = () => {
     navigate(`/booking?package=${pkg.id}&ritual=${selectedRitualId}`);
@@ -50,7 +74,7 @@ export default function PackageDetailPage() {
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Breadcrumb */}
-      <div className="text-xs text-stone-400 mb-6 flex items-center gap-2">
+      <div className="no-print text-xs text-stone-400 mb-6 flex items-center gap-2">
         <Link to="/" className="hover:text-stone-600">หน้าหลัก</Link>
         <span>&gt;</span>
         <Link to="/packages" className="hover:text-stone-600">แพ็กเกจจัดงาน</Link>
@@ -58,7 +82,7 @@ export default function PackageDetailPage() {
         <span className="text-stone-700 font-medium">{pkg.name}</span>
       </div>
 
-      {/* Header Card ด้านบนตามรูปดีไซน์ */}
+      {/* Header Card ด้านบน */}
       <div className="bg-white rounded-3xl p-6 sm:p-8 border border-[#E6DAC3] shadow-sm grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
         {/* รูปภาพด้านซ้าย */}
         <div className="lg:col-span-4">
@@ -100,23 +124,30 @@ export default function PackageDetailPage() {
         {/* กล่องราคาและปุ่มด้านขวา */}
         <div className="lg:col-span-3">
           <div className="rounded-2xl border border-stone-200 p-5 bg-[#FDFBF7] space-y-3">
-            <p className="text-xs text-stone-500">ราคาเริ่มต้น</p>
-            <p className="text-3xl font-bold text-stone-900">
-              {pkg.price.toLocaleString()} <span className="text-sm font-normal">บาท</span>
+            <p className="text-xs text-stone-500">
+              {selectedUpgradeCost > 0 ? 'ราคารวมอัปเกรดพิธีกรรม' : 'ราคาเริ่มต้น'}
             </p>
+            <p className="text-3xl font-bold text-stone-900">
+              {displayPrice.toLocaleString()} <span className="text-sm font-normal">บาท</span>
+            </p>
+            {selectedUpgradeCost > 0 && (
+              <p className="text-[11px] text-amber-800 font-medium">
+                (แพ็กเกจ {Number(pkg.price || 0).toLocaleString()} + อัปเกรดพิธี {selectedUpgradeCost.toLocaleString()} บาท)
+              </p>
+            )}
             <p className="text-[11px] text-stone-400">(ราคาไม่รวมค่าใช้จ่ายที่เพิ่มเองบางรายการ)</p>
 
             {viewMode === 'SUMMARY_10' ? (
               <button
                 onClick={() => setViewMode('FULL_TABLE')}
-                className="w-full py-2.5 rounded-xl bg-[#2E5A44] hover:bg-[#234635] text-white text-xs font-semibold transition"
+                className="no-print w-full py-2.5 rounded-xl bg-[#2E5A44] hover:bg-[#234635] text-white text-xs font-semibold transition"
               >
                 รายละเอียดแบบเต็ม
               </button>
             ) : (
               <button
                 onClick={() => setViewMode('SUMMARY_10')}
-                className="w-full py-2.5 rounded-xl bg-[#2E5A44] hover:bg-[#234635] text-white text-xs font-semibold transition"
+                className="no-print w-full py-2.5 rounded-xl bg-[#2E5A44] hover:bg-[#234635] text-white text-xs font-semibold transition"
               >
                 ดูสรุป 10 หมวดหมู่
               </button>
@@ -124,7 +155,7 @@ export default function PackageDetailPage() {
 
             <button
               onClick={handlePrintPdf}
-              className="w-full py-2 rounded-xl border border-stone-300 hover:bg-stone-100 text-stone-700 text-xs font-medium flex items-center justify-center gap-1.5 transition"
+              className="no-print w-full py-2 rounded-xl border border-stone-300 hover:bg-stone-100 text-stone-700 text-xs font-medium flex items-center justify-center gap-1.5 transition"
             >
               <FileDown className="w-3.5 h-3.5" />
               ดาวน์โหลดรายละเอียด (PDF)
@@ -357,11 +388,11 @@ export default function PackageDetailPage() {
 
         {/* แถบเบอร์ติดต่อช่วยเหลือ */}
         <div className="bg-[#EFECE6] rounded-xl py-3 px-4 text-center text-xs text-stone-700">
-          หากมีข้อสงสัยหรือต้องการความช่วยเหลือ กรุณาติดต่อเจ้าหน้าที่ <strong>0123456789</strong> (ทุกวัน 8.00 - 17.00 น.)
+          หากมีข้อสงสัยหรือต้องการความช่วยเหลือ กรุณาติดต่อเจ้าหน้าที่ <strong>{SITE_CONFIG.contactPhone}</strong> / <strong>{SITE_CONFIG.contactMobile}</strong> ({SITE_CONFIG.serviceHours})
         </div>
 
         {/* ปุ่มย้อนกลับ และ ปุ่มเลือกแพ็กเกจนี้ */}
-        <div className="flex items-center justify-between pt-2">
+        <div className="no-print flex items-center justify-between pt-2">
           <Link
             to="/packages"
             className="px-5 py-2.5 rounded-xl border border-stone-300 bg-white hover:bg-stone-100 text-xs sm:text-sm font-medium text-stone-700 flex items-center gap-2 transition"

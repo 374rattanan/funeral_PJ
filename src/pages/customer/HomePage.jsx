@@ -5,7 +5,7 @@ import { useApp } from '../../context/AppContext';
 import { PORTFOLIO_ITEMS } from '../../data/initialData';
 
 export default function HomePage() {
-  const { packages, locations, departments, staff, bookings, supabaseConnected } = useApp();
+  const { packages, locations, departments, staff, bookings } = useApp();
   const [pkgStartIndex, setPkgStartIndex] = useState(0);
 
   // แสดงครั้งละ 3 แพ็กเกจ แบบวนรอบต่อเนื่อง (Circular Wrap-around: 1-2-3 -> 2-3-4 -> 3-4-1 -> 4-1-2)
@@ -43,15 +43,15 @@ export default function HomePage() {
   return (
     <div className="space-y-16 pb-8">
       {/* Hero Section ตามรูปดีไซน์ */}
-      <section className="relative bg-stone-900 overflow-hidden">
+      <section className="relative bg-stone-900 overflow-hidden min-h-[340px] sm:min-h-[420px] flex items-center">
         <img
-          src="https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=1600&q=80"
-          alt="ดอกลั่นทม วิสาหกิจชุมชนบ้านวิเวก"
-          className="absolute inset-0 w-full h-full object-cover opacity-55"
+          src="/images/header-banner.png"
+          alt="แบนเนอร์ วิสาหกิจชุมชนบ้านวิเวก"
+          className="absolute inset-0 w-full h-full object-cover object-center opacity-55"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-stone-900/75 via-stone-900/40 to-transparent" />
 
-        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
+        <div className="relative w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-16">
           <h1 className="text-2xl sm:text-4xl font-bold text-white drop-shadow leading-snug">
             ยินดีต้อนรับ วิสาหกิจชุมชนบ้านวิเวก
           </h1>
@@ -108,8 +108,8 @@ export default function HomePage() {
         </div>
 
         <div className="relative flex items-center gap-3 sm:gap-4">
-          {/* ปุ่มเลื่อนซ้าย (วนรอบได้ตลอด) */}
-          {totalPackages > 1 && (
+          {/* ปุ่มเลื่อนซ้าย (แสดงเมื่อมีมากกว่า 3 แพ็กเกจ) */}
+          {totalPackages > 3 && (
             <button
               type="button"
               onClick={handlePrevPackages}
@@ -140,7 +140,7 @@ export default function HomePage() {
                     <h3 className="font-bold text-lg text-stone-800">{pkg.name}</h3>
                     <p className="text-xs text-stone-500 mt-0.5">{pkg.durationText} | แขก {pkg.baseGuests} คน</p>
                     <p className="mt-3 text-2xl font-bold text-[#9B7B45]">
-                      {pkg.price.toLocaleString()} <span className="text-xs font-normal text-stone-500">บาท</span>
+                      {Number(pkg.price || 0).toLocaleString()} <span className="text-xs font-normal text-stone-500">บาท</span>
                     </p>
                   </div>
 
@@ -172,8 +172,8 @@ export default function HomePage() {
             ))}
           </div>
 
-          {/* ปุ่มเลื่อนขวา (วนรอบได้ตลอด) */}
-          {totalPackages > 1 && (
+          {/* ปุ่มเลื่อนขวา (แสดงเมื่อมีมากกว่า 3 แพ็กเกจ) */}
+          {totalPackages > 3 && (
             <button
               type="button"
               onClick={handleNextPackages}
@@ -187,7 +187,7 @@ export default function HomePage() {
 
         {/* ตัวบอกตำแหน่งการเลื่อน (Dots) และลิงก์ดูแพ็กเกจทั้งหมด */}
         <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 px-2">
-          {totalPackages > 1 ? (
+          {totalPackages > 3 ? (
             <div className="flex items-center gap-2 mx-auto sm:mx-0">
               {packages.map((pkg, idx) => (
                 <button
@@ -318,7 +318,7 @@ export default function HomePage() {
               <div className="bg-white rounded-2xl p-5 border border-stone-300 text-center shadow-sm">
                 <p className="text-xs font-semibold text-stone-600">สถานที่และศาลาพร้อมรองรับ</p>
                 <p className="text-2xl sm:text-3xl font-bold text-stone-900 mt-2">
-                  {activeLocations.length} <span className="text-sm font-medium text-stone-500">วัด</span> / {totalActivePavilions} <span className="text-sm font-medium text-stone-500">ศาลา</span>
+                  {activeLocations.length} <span className="text-sm font-medium text-stone-500">แห่ง</span> / {totalActivePavilions} <span className="text-sm font-medium text-stone-500">ศาลา</span>
                 </p>
                 <p className="text-[11px] text-stone-400 mt-1">ตรวจสอบคิวศาลาว่างได้ทันที</p>
               </div>
@@ -341,12 +341,8 @@ export default function HomePage() {
             </div>
 
             <div className="bg-white rounded-2xl p-5 border border-stone-300 shadow-sm">
-              <div className="flex items-center justify-between mb-1.5">
+              <div className="mb-1.5">
                 <h4 className="font-bold text-sm text-stone-800">แหล่งข้อมูลระบบจัดงาน</h4>
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  {supabaseConnected ? 'เชื่อมต่อฐานข้อมูล Supabase แล้ว' : 'ซิงก์ข้อมูลระบบอัตโนมัติ'}
-                </span>
               </div>
               <p className="text-xs text-stone-600">
                 แพ็กเกจยอดนิยมปัจจุบัน : <strong className="text-[#9B7B45]">{recommendedPkg?.name || '-'}</strong> (เลือกใช้สูงสุด {recommendedPkg?.bookingCount || 0} งาน)
@@ -363,34 +359,30 @@ export default function HomePage() {
               <h4 className="font-bold text-sm text-stone-800">
                 สถิติการเลือกใช้แพ็กเกจจัดงานจริง (อ้างอิงจากใบจองในระบบ)
               </h4>
-              <p className="text-xs text-stone-500 mt-0.5">
-                แพ็กเกจที่มีลูกค้าเลือกสูงสุดจะได้รับป้าย ★ แนะนำ โดยอัตโนมัติ
-              </p>
             </div>
 
-            <div className="h-48 flex items-end justify-around gap-4 px-4 pt-8 border-b border-l border-stone-300 mt-4">
+            <div className="h-52 flex items-end justify-around gap-4 px-4 pt-6 border-b border-l border-stone-300 mt-4">
               {packages.map((pkg, idx) => {
                 const count = pkg.bookingCount || 0;
-                const heightPercent = count > 0 ? Math.max(22, Math.round((count / maxPkgBookings) * 100)) : 12;
+                const heightPercent = count > 0 ? Math.max(20, Math.round((count / maxPkgBookings) * 76)) : 12;
                 const barColors = ['bg-[#2E5A44]', 'bg-[#9B7B45]', 'bg-[#65543F]', 'bg-stone-600'];
                 const barColor = pkg.isRecommended ? 'bg-[#B5945B]' : barColors[idx % barColors.length];
 
                 return (
                   <div key={pkg.id} className="flex flex-col items-center justify-end h-full flex-1">
-                    <span className={`text-[11px] font-bold mb-1.5 ${pkg.isRecommended ? 'text-[#9B7B45]' : 'text-stone-600'}`}>
+                    {pkg.isRecommended && (
+                      <span className="mb-1 text-[10px] bg-[#B5945B] text-white px-1.5 py-0.5 rounded font-bold whitespace-nowrap shadow">
+                        ★ แนะนำ
+                      </span>
+                    )}
+                    <span className={`text-[11px] font-bold mb-1 ${pkg.isRecommended ? 'text-[#9B7B45]' : 'text-stone-600'}`}>
                       {count} งาน
                     </span>
                     <div
                       style={{ height: `${heightPercent}%` }}
-                      className={`w-full max-w-[42px] ${barColor} rounded-t-md shadow-sm transition-all duration-500 relative`}
+                      className={`w-full max-w-[42px] ${barColor} rounded-t-md shadow-sm transition-all duration-500`}
                       title={`${pkg.name}: ${count} งาน`}
-                    >
-                      {pkg.isRecommended && (
-                        <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] bg-[#B5945B] text-white px-1.5 py-0.5 rounded font-bold whitespace-nowrap shadow">
-                          ★ แนะนำ
-                        </span>
-                      )}
-                    </div>
+                    />
                   </div>
                 );
               })}

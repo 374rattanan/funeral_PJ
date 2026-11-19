@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams, useNavigate, Link } from 'react-router-dom';
 import {
   FolderUp,
@@ -14,6 +14,29 @@ import {
 } from 'lucide-react';
 import { useApp, fileToDataUrl } from '../../context/AppContext';
 import { SAMPLE_ID_CARD_DATA_URL, SAMPLE_DEATH_CERT_DATA_URL } from '../../data/initialData';
+import { IS_DEMO_MODE } from '../../config/siteConfig';
+
+// Helper จัดการวันที่แบบ Local Time ป้องกัน Timezone shift และ Invalid Date crash
+const formatLocalDate = (d) => {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+const parseLocalDate = (dateStr) => {
+  if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return null;
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  return Number.isNaN(dt.getTime()) ? null : dt;
+};
+
+const addDaysToDateStr = (dateStr, days) => {
+  const dt = parseLocalDate(dateStr);
+  if (!dt) return '';
+  dt.setDate(dt.getDate() + days);
+  return formatLocalDate(dt);
+};
 
 export default function BookingPage() {
   const [searchParams] = useSearchParams();
@@ -28,10 +51,24 @@ export default function BookingPage() {
     setPreviewImageModal
   } = useApp();
 
+  const todayStr = useMemo(() => formatLocalDate(new Date()), []);
+
   const recommendedPkg = packages.find(p => p.isRecommended) || packages[2] || packages[0];
   const initialPkgId = searchParams.get('package') || recommendedPkg?.id || 'PKG-03';
-  const initialPkg = packages.find(p => p.id === initialPkgId) || recommendedPkg;
-  const initialRitualId = searchParams.get('ritual') || initialPkg.defaultRitualId;
+  const initialPkg = packages.find(p => p.id === initialPkgId) || recommendedPkg || {
+    id: 'PKG-03',
+    name: 'แพ็กเกจมาตรฐาน',
+    price: 75000,
+    durationDays: 4,
+    durationNights: 3,
+    baseGuests: 150,
+    maxGuests: 200,
+    defaultRitualId: 'RITUAL-02'
+  };
+  const paramRitual = searchParams.get('ritual');
+  const initialRitualId = (ritualTypes || []).some(r => r.id === paramRitual)
+    ? paramRitual
+    : (initialPkg.defaultRitualId || 'RITUAL-02');
 
   const [step, setStep] = useState(1); // 1, 2, 3, 4
   const [selectedPkgId, setSelectedPkgId] = useState(initialPkg.id);
@@ -69,39 +106,72 @@ export default function BookingPage() {
   const [step1Error, setStep1Error] = useState('');
 
   // Step 2: จำนวนแขก, รายการเสริม (Add-ons), และรูปแบบพิธีกรรม
-  const [guestCount, setGuestCount] = useState(selectedPkg.baseGuests);
+  const [guestCount, setGuestCount] = useState(selectedPkg.baseGuests || 50);
   const [selectedAddons, setSelectedAddons] = useState({}); // { [serviceId]: qty }
   const [selectedRitualId, setSelectedRitualId] = useState(initialRitualId);
 
-  // Step 3: สถานที่/ศาลา และปฏิทินเลือกช่วงวัน (Trip.com / Agoda Range Calendar)
-  const activeLocations = locations.filter(l => l.isActive);
+  // Step 3: สถานที่/ศาลา (กรองเฉพาะสถานที่และศาลาที่เปิดให้บริการ)
+  const activeLocations = useMemo(
+    () => (locations || []).filter(l => l.isActive !== false),
+    [locations]
+  );
   const [locationId, setLocationId] = useState(activeLocations[0]?.id || 'LOC-01');
   const currentLocation = activeLocations.find(l => l.id === locationId) || activeLocations[0];
-  const [pavilionId, setPavilionId] = useState(currentLocation?.pavilions?.[0]?.id || 'PAV-01');
+  const activePavilions = useMemo(
+    () => (currentLocation?.pavilions || []).filter(p => p.isActive !== false),
+    [currentLocation]
+  );
+  const [pavilionId, setPavilionId] = useState(activePavilions[0]?.id || 'PAV-01');
 
-  const [calendarMonth, setCalendarMonth] = useState(() => new Date(2026, 7, 1)); // สิงหาคม 2026 (2569)
-  const [startDate, setStartDate] = useState('2026-08-18');
-  const [cremationDate, setCremationDate] = useState('2026-08-21');
-  const [boneDate, setBoneDate] = useState('2026-08-22');
+  useEffect(() => {
+    if (activeLocations.length > 0 && !activeLocations.some(l => l.id === locationId)) {
+      setLocationId(activeLocations[0].id);
+    }
+  }, [activeLocations, locationId]);
+
+  useEffect(() => {
+    if (activePavilions.length > 0 && !activePavilions.some(p => p.id === pavilionId)) {
+      setPavilionId(activePavilions[0].id);
+    }
+  }, [activePavilions, pavilionId]);
+
+  // ปฏิทินเริ่มต้นที่เดือนปัจจุบัน และวันเริ่มงานเริ่มต้นตามจำนวนวันของแพ็กเกจ
+  const defaultStart = useMemo(() => addDaysToDateStr(todayStr, 1), [todayStr]);
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
+  const [startDate, setStartDate] = useState(defaultStart);
+  const [cremationDate, setCremationDate] = useState(() =>
+    addDaysToDateStr(defaultStart, Math.max(0, (initialPkg.durationDays || 3) - 1))
+  );
+  const [boneDate, setBoneDate] = useState(() =>
+    addDaysToDateStr(defaultStart, Math.max(1, initialPkg.durationDays || 3))
+  );
   const [step3Error, setStep3Error] = useState('');
 
   // Step 4: รูปแบบการชำระเงิน & วันเวลานัดหมายที่ศูนย์บริการ
   const [paymentOption, setPaymentOption] = useState('INSTALLMENT'); // 'FULL' | 'INSTALLMENT'
-  const [appointmentDate, setAppointmentDate] = useState('2026-08-17');
+  const [appointmentDate, setAppointmentDate] = useState(todayStr);
   const [appointmentTime, setAppointmentTime] = useState('09:00 - 10:00 น.');
+  const [step4Error, setStep4Error] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // คำนวณส่วนต่างพิธีกรรม
+  // คำนวณส่วนต่างพิธีกรรมจากข้อมูล ritualTypes จริง
   const ritualUpgradePrice = useMemo(() => {
     if (selectedRitualId === selectedPkg.defaultRitualId) return 0;
-    if (selectedPkg.defaultRitualId === 'RITUAL-03') {
-      if (selectedRitualId === 'RITUAL-02') return 3500;
-      if (selectedRitualId === 'RITUAL-01') return 8500;
-    }
-    if (selectedPkg.defaultRitualId === 'RITUAL-02') {
-      if (selectedRitualId === 'RITUAL-01') return 5000;
-    }
+    const targetRitual = (ritualTypes || []).find(r => r.id === selectedRitualId);
+    if (!targetRitual) return 0;
+    if (selectedPkg.defaultRitualId === 'RITUAL-03') return Number(targetRitual.upgradePriceFrom3) || 0;
+    if (selectedPkg.defaultRitualId === 'RITUAL-02') return Number(targetRitual.upgradePriceFrom2) || 0;
     return 0;
-  }, [selectedRitualId, selectedPkg]);
+  }, [selectedRitualId, selectedPkg, ritualTypes]);
+
+  // คำนวณค่าใช้จ่ายกรณีเพิ่มจำนวนแขกเกินจำนวนตั้งต้นในแพ็กเกจ (150 บาท/คน)
+  const EXTRA_GUEST_RATE = 150;
+  const maxGuestsCap = selectedPkg.maxGuests || 300;
+  const extraGuestsCount = Math.max(0, guestCount - (selectedPkg.baseGuests || 50));
+  const extraGuestsCost = extraGuestsCount * EXTRA_GUEST_RATE;
 
   // คำนวณรายการเสริมที่เลือก
   const addonItemsList = useMemo(() => {
@@ -122,14 +192,39 @@ export default function BookingPage() {
       .filter(Boolean);
   }, [selectedAddons, services]);
 
-  const addonsTotal = useMemo(
+  const addonsOnlyTotal = useMemo(
     () => addonItemsList.reduce((sum, item) => sum + item.total, 0),
     [addonItemsList]
   );
 
-  const netTotal = selectedPkg.price + ritualUpgradePrice + addonsTotal;
+  const addonsTotal = addonsOnlyTotal + extraGuestsCost;
+  const netTotal = (Number(selectedPkg.price) || 0) + ritualUpgradePrice + addonsTotal;
 
-  // ฟังก์ชันกรอกข้อมูลตัวอย่างอัตโนมัติ (ช่วยให้ทดสอบได้เร็วขึ้น)
+  // คำนวณอายุอัตโนมัติเมื่อเลือกวันเกิดและวันเสียชีวิต
+  const computeAgeYears = (bDateStr, dDateStr) => {
+    if (!bDateStr) return '';
+    const birth = parseLocalDate(bDateStr);
+    const ref = dDateStr ? parseLocalDate(dDateStr) : new Date();
+    if (!birth || !ref) return '';
+    let age = ref.getFullYear() - birth.getFullYear();
+    const m = ref.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && ref.getDate() < birth.getDate())) {
+      age -= 1;
+    }
+    return age >= 0 ? String(age) : '';
+  };
+
+  const handleBirthOrDeathChange = (field, val) => {
+    setDeceased(prev => {
+      const next = { ...prev, [field]: val };
+      const nextBirth = field === 'birthDate' ? val : prev.birthDate;
+      const nextDeath = field === 'deathDate' ? val : prev.deathDate;
+      next.age = computeAgeYears(nextBirth, nextDeath);
+      return next;
+    });
+  };
+
+  // ฟังก์ชันกรอกข้อมูลตัวอย่างอัตโนมัติ (เฉพาะโหมดสาธิต)
   const handleFillSampleStep1 = () => {
     setContact({
       prefix: 'นาย',
@@ -152,18 +247,26 @@ export default function BookingPage() {
       nationalId: '1-5014-00987-65-4',
       gender: 'ชาย',
       birthDate: '1948-04-12',
-      deathDate: '2026-08-16',
-      age: '78',
+      deathDate: todayStr,
+      age: computeAgeYears('1948-04-12', todayStr),
       placeOfDeath: 'โรงพยาบาลสันทราย',
       deathCertDoc: SAMPLE_DEATH_CERT_DATA_URL
     });
     setStep1Error('');
   };
 
-  // อัปโหลดไฟล์เอกสารเป็น Base64 Data URL
+  // อัปโหลดไฟล์เอกสารเป็น Base64 Data URL พร้อมตรวจประเภทและขนาดไฟล์
   const handleUploadDoc = async (e, targetField) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
+      setStep1Error('รองรับเฉพาะไฟล์รูปภาพ (JPG, PNG) หรือ PDF เท่านั้น');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setStep1Error('ขนาดไฟล์ต้องไม่เกิน 5 MB');
+      return;
+    }
     try {
       const dataUrl = await fileToDataUrl(file);
       if (targetField === 'contactIdCard') {
@@ -171,19 +274,39 @@ export default function BookingPage() {
       } else if (targetField === 'deceasedCert') {
         setDeceased(prev => ({ ...prev, deathCertDoc: dataUrl }));
       }
+      setStep1Error('');
     } catch (err) {
       console.error('Upload error:', err);
+      setStep1Error('ไม่สามารถอ่านไฟล์เอกสารได้ กรุณาลองอัปโหลดใหม่อีกครั้ง');
     }
   };
 
   // ตรวจสอบ Step 1 ก่อนไป Step 2
   const handleNextFromStep1 = () => {
-    if (!contact.fullName.trim() || !contact.phone.trim() || !contact.relationship.trim() || !contact.address.trim()) {
+    if (!contact.fullName.trim() || !contact.phone.trim() || !contact.relationship.trim() || !contact.address.trim() || !contact.postalCode.trim()) {
       setStep1Error('กรุณากรอกข้อมูลผู้ติดต่อที่มีเครื่องหมาย * ให้ครบถ้วน');
       return;
     }
-    if (!deceased.fullName.trim() || !deceased.nationalId.trim() || !deceased.birthDate || !deceased.deathDate) {
+    const phoneDigits = contact.phone.replace(/\D/g, '');
+    if (phoneDigits.length < 9 || phoneDigits.length > 10) {
+      setStep1Error('กรุณากรอกเบอร์โทรศัพท์ผู้ติดต่อให้ถูกต้อง (ตัวเลข 9-10 หลัก)');
+      return;
+    }
+    if (!deceased.prefix?.trim() || !deceased.fullName.trim() || !deceased.nationalId.trim() || !deceased.birthDate || !deceased.deathDate) {
       setStep1Error('กรุณากรอกข้อมูลผู้เสียชีวิตที่มีเครื่องหมาย * ให้ครบถ้วน');
+      return;
+    }
+    const nidDigits = deceased.nationalId.replace(/\D/g, '');
+    if (nidDigits.length !== 13) {
+      setStep1Error('กรุณากรอกเลขประจำตัวประชาชนผู้เสียชีวิตให้ครบ 13 หลัก');
+      return;
+    }
+    if (deceased.deathDate > todayStr) {
+      setStep1Error('วันที่เสียชีวิตต้องไม่เป็นวันในอนาคต');
+      return;
+    }
+    if (deceased.birthDate > deceased.deathDate) {
+      setStep1Error('วันเดือนปีเกิดของผู้เสียชีวิตต้องไม่เป็นวันหลังจากวันที่เสียชีวิต');
       return;
     }
     if (!contact.idCardDoc || !deceased.deathCertDoc) {
@@ -211,17 +334,17 @@ export default function BookingPage() {
     });
   };
 
-  // ตรวจสอบคิวว่างของวัดและศาลาในปฏิทิน Step 3
+  // ตรวจสอบคิวว่างของวัดและศาลาในปฏิทิน Step 3 (รวมวันเก็บอัฐิด้วย)
   const getDateBookingStatus = (dateStr) => {
-    // ตรวจว่าในวันนั้นมีงานอื่นจองในสถานที่เดียวกันหรือไม่
     const matchedBookings = bookings.filter(b => {
       if (b.status === 'ยกเลิก') return false;
       if (b.locationId !== locationId) return false;
-      return dateStr >= b.startDate && dateStr <= b.cremationDate;
+      const bookingEnd = b.boneCollectionDate || b.cremationDate || b.startDate;
+      return dateStr >= b.startDate && dateStr <= bookingEnd;
     });
 
     const isSelectedPavilionBooked = matchedBookings.some(b => b.pavilionId === pavilionId);
-    const totalPavilions = currentLocation?.pavilions?.length || 1;
+    const totalPavilions = Math.max(1, activePavilions.length);
     const bookedPavilionsCount = new Set(matchedBookings.map(b => b.pavilionId)).size;
 
     return {
@@ -232,41 +355,87 @@ export default function BookingPage() {
     };
   };
 
-  // คลิกเลือกวันในปฏิทินแบบ Agoda / Trip.com Range Picker
+  // ตรวจสอบว่าช่วงวัน [rangeStart, rangeEnd] ทับซ้อนกับงานอื่นในศาลาที่เลือกหรือไม่
+  const findPavilionRangeConflict = (rangeStart, rangeEnd, targetLocId = locationId, targetPavId = pavilionId) => {
+    if (!rangeStart || !rangeEnd) return null;
+    return bookings.find(b => {
+      if (b.status === 'ยกเลิก') return false;
+      if (b.locationId !== targetLocId || b.pavilionId !== targetPavId) return false;
+      const bookingEnd = b.boneCollectionDate || b.cremationDate || b.startDate;
+      return rangeStart <= bookingEnd && rangeEnd >= b.startDate;
+    }) || null;
+  };
+
+  // คลิกเลือกวันในปฏิทิน (ป้องกัน Invalid Date crash และวันย้อนหลัง)
   const handleSelectCalendarDate = (dateStr) => {
-    const status = getDateBookingStatus(dateStr);
-    if (status.isSelectedPavilionBooked) {
-      setStep3Error(`วันที่ ${dateStr} ศาลานี้มีคิวจองแล้ว กรุณาเลือกวันอื่นหรือเปลี่ยนศาลา`);
+    if (!dateStr) {
+      setStartDate('');
+      setCremationDate('');
+      setBoneDate('');
+      return;
+    }
+    const startObj = parseLocalDate(dateStr);
+    if (!startObj) return;
+
+    if (dateStr < todayStr) {
+      setStep3Error('ไม่สามารถเลือกวันตั้งศพย้อนหลังได้ กรุณาเลือกตั้งแต่วันนี้เป็นต้นไป');
+      return;
+    }
+
+    const nextStart = formatLocalDate(startObj);
+    const nextCrem = addDaysToDateStr(nextStart, Math.max(0, (selectedPkg.durationDays || 3) - 1));
+    const nextBone = addDaysToDateStr(nextCrem, 1);
+
+    const conflictBooking = findPavilionRangeConflict(nextStart, nextBone);
+    if (conflictBooking) {
+      const bEnd = conflictBooking.boneCollectionDate || conflictBooking.cremationDate;
+      setStep3Error(
+        `ช่วงวันที่ ${nextStart} ถึง ${nextBone} ศาลานี้มีคิวงาน (${conflictBooking.code} คุณ${conflictBooking.deceased?.fullName}) จองอยู่แล้ว (${conflictBooking.startDate} - ${bEnd}) กรุณาเลือกวันอื่นหรือเปลี่ยนศาลา`
+      );
       return;
     }
     setStep3Error('');
 
-    // คำนวณวันฌาปนกิจและวันเก็บกระดูกอัตโนมัติตามจำนวนวันในแพ็กเกจ (หรือคลิกเพื่อกำหนดช่วง)
-    const startObj = new Date(dateStr);
-    const cremObj = new Date(startObj);
-    cremObj.setDate(startObj.getDate() + (selectedPkg.durationDays - 1));
+    setStartDate(nextStart);
+    setCremationDate(nextCrem);
+    setBoneDate(nextBone);
 
-    const boneObj = new Date(cremObj);
-    boneObj.setDate(cremObj.getDate() + 1);
-
-    const fmt = (d) => d.toISOString().split('T')[0];
-    setStartDate(fmt(startObj));
-    setCremationDate(fmt(cremObj));
-    setBoneDate(fmt(boneObj));
-
-    // ตั้งวันนัดหมายติดต่อศูนย์บริการเป็น 1 วันก่อนเริ่มงาน
-    const apptObj = new Date(startObj);
-    apptObj.setDate(startObj.getDate() - 1);
-    setAppointmentDate(fmt(apptObj));
+    // ตั้งวันนัดหมายติดต่อศูนย์บริการเป็น 1 วันก่อนเริ่มงาน (แต่ไม่ย้อนหลังกว่าวันนี้)
+    const suggestedAppt = addDaysToDateStr(nextStart, -1);
+    setAppointmentDate(suggestedAppt < todayStr ? todayStr : suggestedAppt);
   };
 
   const handleNextFromStep3 = () => {
+    if (!currentLocation || activePavilions.length === 0) {
+      setStep3Error('ขณะนี้ยังไม่มีสถานที่หรือศาลาที่เปิดให้บริการ กรุณาติดต่อเจ้าหน้าที่');
+      return;
+    }
     if (!startDate || !cremationDate || !boneDate) {
       setStep3Error('กรุณาระบุวันตั้งศพวันแรก วันฌาปนกิจ และวันเก็บกระดูกให้ครบถ้วน');
       return;
     }
+    if (startDate < todayStr) {
+      setStep3Error('วันตั้งศพวันแรกต้องไม่เป็นวันในอดีต');
+      return;
+    }
+    if (deceased.deathDate && startDate < deceased.deathDate) {
+      setStep3Error(`วันตั้งศพวันแรก (${startDate}) ต้องไม่เป็นวันก่อนวันที่เสียชีวิต (${deceased.deathDate})`);
+      return;
+    }
     if (cremationDate < startDate) {
       setStep3Error('วันฌาปนกิจต้องไม่ก่อนวันตั้งศพวันแรก');
+      return;
+    }
+    if (boneDate < cremationDate) {
+      setStep3Error('วันเก็บกระดูกต้องไม่ก่อนวันฌาปนกิจ');
+      return;
+    }
+    const conflictBooking = findPavilionRangeConflict(startDate, boneDate);
+    if (conflictBooking) {
+      const bEnd = conflictBooking.boneCollectionDate || conflictBooking.cremationDate;
+      setStep3Error(
+        `ช่วงวันที่เลือก (${startDate} ถึง ${boneDate}) ทับซ้อนกับคิวงาน ${conflictBooking.code} ในศาลานี้ (${conflictBooking.startDate} - ${bEnd}) กรุณาเลือกช่วงวันอื่นหรือเปลี่ยนศาลา`
+      );
       return;
     }
     setStep3Error('');
@@ -276,8 +445,30 @@ export default function BookingPage() {
 
   // กดยืนยันส่งคำขอจัดงานใน Step 4
   const handleSubmitBooking = () => {
+    if (isSubmitting) return;
+    if (!appointmentDate) {
+      setStep4Error('กรุณาระบุวันที่นัดหมายเข้าติดต่อศูนย์บริการ');
+      return;
+    }
+    if (appointmentDate < todayStr) {
+      setStep4Error('วันที่นัดหมายต้องไม่เป็นวันในอดีต');
+      return;
+    }
+    if (startDate && appointmentDate > startDate) {
+      setStep4Error('วันที่นัดหมายติดต่อศูนย์บริการควรอยู่ก่อนหรือภายในวันตั้งศพวันแรก');
+      return;
+    }
+    const finalConflict = findPavilionRangeConflict(startDate, boneDate);
+    if (finalConflict) {
+      setStep4Error(`ขออภัย ศาลาที่เลือกเพิ่งถูกจองในช่วงวันดังกล่าว (${finalConflict.code}) กรุณาย้อนกลับไปเลือกวันหรือศาลาใหม่`);
+      return;
+    }
+
+    setStep4Error('');
+    setIsSubmitting(true);
+
     const selectedRitual = ritualTypes.find(r => r.id === selectedRitualId) || ritualTypes[1];
-    const selectedPavilion = currentLocation?.pavilions?.find(p => p.id === pavilionId) || currentLocation?.pavilions?.[0];
+    const selectedPavilion = activePavilions.find(p => p.id === pavilionId) || activePavilions[0];
 
     const newBooking = createBookingRequest({
       packageId: selectedPkg.id,
@@ -286,13 +477,14 @@ export default function BookingPage() {
       durationDays: selectedPkg.durationDays,
       durationNights: selectedPkg.durationNights,
       baseGuests: selectedPkg.baseGuests,
-      extraGuests: Math.max(0, guestCount - selectedPkg.baseGuests),
+      extraGuests: extraGuestsCount,
+      extraGuestsCost,
       totalGuests: guestCount,
       ritualId: selectedRitual.id,
       ritualName: selectedRitual.name,
       ritualUpgradePrice,
-      locationId: currentLocation.id,
-      locationName: currentLocation.name,
+      locationId: currentLocation?.id || 'LOC-01',
+      locationName: currentLocation?.name || 'วัดวิเวกวนาราม',
       pavilionId: selectedPavilion?.id || 'PAV-01',
       pavilionName: selectedPavilion?.name || 'ศาลา 1',
       startDate,
@@ -314,7 +506,7 @@ export default function BookingPage() {
     navigate(`/booking/success?req=${newBooking.id}`);
   };
 
-  // สร้างตารางวันในปฏิทินสำหรับเดือนที่เลือก
+  // สร้างตารางวันในปฏิทินสำหรับเดือนที่เลือก (เลขวันเดือนถัดไปเรียง 1, 2, 3... ถูกต้อง)
   const calendarDays = useMemo(() => {
     const year = calendarMonth.getFullYear();
     const month = calendarMonth.getMonth();
@@ -335,8 +527,9 @@ export default function BookingPage() {
         dateStr: `${year}-${mStr}-${dStr}`
       });
     }
+    let nextMonthDay = 1;
     while (cells.length % 7 !== 0) {
-      cells.push({ day: cells.length % 7, isCurrentMonth: false, dateStr: null });
+      cells.push({ day: nextMonthDay++, isCurrentMonth: false, dateStr: null });
     }
     return cells;
   }, [calendarMonth]);
@@ -417,14 +610,16 @@ export default function BookingPage() {
         <div>
           <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
             <h1 className="text-2xl font-bold text-stone-900">ข้อมูลผู้ติดต่อ</h1>
-            <button
-              type="button"
-              onClick={handleFillSampleStep1}
-              className="px-3.5 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-semibold flex items-center gap-1.5 transition"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              กรอกข้อมูลตัวอย่างอัตโนมัติ (สำหรับทดสอบเร็ว)
-            </button>
+            {IS_DEMO_MODE && (
+              <button
+                type="button"
+                onClick={handleFillSampleStep1}
+                className="px-3.5 py-1.5 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 text-xs font-semibold flex items-center gap-1.5 transition"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                กรอกข้อมูลตัวอย่างอัตโนมัติ (โหมดสาธิต)
+              </button>
+            )}
           </div>
 
           {step1Error && (
@@ -529,45 +724,57 @@ export default function BookingPage() {
                   <label className="block text-xs font-medium text-stone-700 mb-1">
                     จังหวัด <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <input
+                    type="text"
+                    list="booking-provinces"
                     value={contact.province}
                     onChange={e => setContact({ ...contact, province: e.target.value })}
                     className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm"
-                  >
-                    <option value="เชียงใหม่">เชียงใหม่</option>
-                    <option value="ลำพูน">ลำพูน</option>
-                    <option value="เชียงราย">เชียงราย</option>
-                  </select>
+                  />
+                  <datalist id="booking-provinces">
+                    <option value="เชียงใหม่" />
+                    <option value="ลำพูน" />
+                    <option value="เชียงราย" />
+                    <option value="ลำปาง" />
+                  </datalist>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-stone-700 mb-1">
                     อำเภอ / เขต <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <input
+                    type="text"
+                    list="booking-districts"
                     value={contact.district}
                     onChange={e => setContact({ ...contact, district: e.target.value })}
                     className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm"
-                  >
-                    <option value="สันทราย">สันทราย</option>
-                    <option value="เมืองเชียงใหม่">เมืองเชียงใหม่</option>
-                    <option value="ดอยสะเก็ด">ดอยสะเก็ด</option>
-                    <option value="แม่ริม">แม่ริม</option>
-                  </select>
+                  />
+                  <datalist id="booking-districts">
+                    <option value="สันทราย" />
+                    <option value="เมืองเชียงใหม่" />
+                    <option value="ดอยสะเก็ด" />
+                    <option value="แม่ริม" />
+                    <option value="สารภี" />
+                    <option value="สันกำแพง" />
+                  </datalist>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-stone-700 mb-1">
                     ตำบล / แขวง <span className="text-red-500">*</span>
                   </label>
-                  <select
+                  <input
+                    type="text"
+                    list="booking-subdistricts"
                     value={contact.subdistrict}
                     onChange={e => setContact({ ...contact, subdistrict: e.target.value })}
                     className="w-full px-3 py-2.5 rounded-xl border border-stone-200 text-sm"
-                  >
-                    <option value="หนองหาร">หนองหาร</option>
-                    <option value="แม่แฝก">แม่แฝก</option>
-                    <option value="สันทรายหลวง">สันทรายหลวง</option>
-                    <option value="หนองจ๊อม">หนองจ๊อม</option>
-                  </select>
+                  />
+                  <datalist id="booking-subdistricts">
+                    <option value="หนองหาร" />
+                    <option value="แม่แฝก" />
+                    <option value="สันทรายหลวง" />
+                    <option value="หนองจ๊อม" />
+                  </datalist>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-stone-700 mb-1">
@@ -681,7 +888,7 @@ export default function BookingPage() {
                   <input
                     type="date"
                     value={deceased.birthDate}
-                    onChange={e => setDeceased({ ...deceased, birthDate: e.target.value })}
+                    onChange={e => handleBirthOrDeathChange('birthDate', e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 text-sm"
                   />
                 </div>
@@ -692,18 +899,18 @@ export default function BookingPage() {
                   <input
                     type="date"
                     value={deceased.deathDate}
-                    onChange={e => setDeceased({ ...deceased, deathDate: e.target.value })}
+                    onChange={e => handleBirthOrDeathChange('deathDate', e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 text-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-stone-700 mb-1">อายุ (ปี)</label>
+                  <label className="block text-xs font-medium text-stone-700 mb-1">อายุ (ปี) <span className="text-stone-400 text-[10px]">(คำนวณอัตโนมัติ)</span></label>
                   <input
                     type="number"
                     placeholder="เช่น 75"
                     value={deceased.age}
                     onChange={e => setDeceased({ ...deceased, age: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 text-sm"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 text-sm bg-stone-50"
                   />
                 </div>
                 <div>
@@ -869,6 +1076,11 @@ export default function BookingPage() {
                         setSelectedPkgId(nextPkg.id);
                         setGuestCount(nextPkg.baseGuests);
                         setSelectedRitualId(nextPkg.defaultRitualId);
+                        if (startDate) {
+                          const nextCrem = addDaysToDateStr(startDate, Math.max(0, (nextPkg.durationDays || 3) - 1));
+                          setCremationDate(nextCrem);
+                          setBoneDate(addDaysToDateStr(nextCrem, 1));
+                        }
                       }
                     }}
                     className="text-xs border border-stone-300 rounded-lg px-2 py-1 bg-stone-50"
@@ -890,14 +1102,16 @@ export default function BookingPage() {
                 <div className="rounded-2xl border border-stone-200 p-4 bg-[#FDFBF7] text-center space-y-2">
                   <p className="text-xs text-stone-500">ราคาเริ่มต้น</p>
                   <p className="text-2xl font-bold text-[#2E5A44]">
-                    {selectedPkg.price.toLocaleString()} <span className="text-xs font-normal text-stone-600">บาท</span>
+                    {Number(selectedPkg.price || 0).toLocaleString()} <span className="text-xs font-normal text-stone-600">บาท</span>
                   </p>
                   <p className="text-[10px] text-stone-400">(ราคาไม่รวมค่าใช้จ่ายที่เพิ่มเองบางรายการ)</p>
                   <Link
                     to={`/packages/${selectedPkg.id}`}
+                    target="_blank"
+                    rel="noreferrer"
                     className="block w-full py-1.5 rounded-lg border border-stone-300 text-xs font-medium text-stone-700 hover:bg-stone-100"
                   >
-                    รายละเอียด
+                    รายละเอียด (เปิดแท็บใหม่)
                   </Link>
                 </div>
               </div>
@@ -911,7 +1125,7 @@ export default function BookingPage() {
                   *รองรับตั้งต้นในแพ็กเกจ: {selectedPkg.baseGuests} คน ไม่สามารถลดจำนวนแขกต่ำกว่าตั้งต้นได้
                 </span>
               </div>
-              <div className="flex items-center gap-4 pt-1">
+              <div className="flex flex-wrap items-center gap-4 pt-1">
                 <span className="text-xs font-medium text-stone-700">ปรับจำนวนแขก</span>
                 <div className="inline-flex items-center border border-stone-300 rounded-lg overflow-hidden bg-white">
                   <button
@@ -926,16 +1140,21 @@ export default function BookingPage() {
                   </span>
                   <button
                     type="button"
-                    onClick={() => setGuestCount(Math.min(selectedPkg.maxGuests || 300, guestCount + 10))}
+                    onClick={() => setGuestCount(Math.min(maxGuestsCap, guestCount + 10))}
                     className="px-3 py-1 text-sm font-bold text-stone-600 hover:bg-stone-100"
                   >
                     +
                   </button>
                 </div>
                 <span className="text-xs text-stone-700">คน</span>
+                {extraGuestsCount > 0 && (
+                  <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-semibold">
+                    +เพิ่ม {extraGuestsCount} คน (+{extraGuestsCost.toLocaleString()} บาท สำหรับชุดอาหารว่าง น้ำดื่ม และเก้าอี้รับรอง)
+                  </span>
+                )}
               </div>
               <p className="text-[11px] text-red-500">
-                *เพิ่มแขกได้ไม่เกิน {selectedPkg.maxGuests || 250} คนสำหรับ{selectedPkg.name}
+                *เพิ่มแขกได้ไม่เกิน {maxGuestsCap} คนสำหรับ{selectedPkg.name} (คิดค่าบริการรองรับแขกเพิ่มท่านละ {EXTRA_GUEST_RATE} บาท)
               </p>
             </div>
 
@@ -975,7 +1194,7 @@ export default function BookingPage() {
                                 -
                               </button>
                               <span className="px-2.5 py-0.5 text-xs font-semibold text-stone-800">
-                                {qty || 1}
+                                {qty}
                               </span>
                               <button
                                 type="button"
@@ -1022,12 +1241,12 @@ export default function BookingPage() {
                   <div>
                     <p className="font-bold text-[#7C6032] mb-1.5">รายการสั่งเพิ่มพิเศษ</p>
                     <div className="space-y-1.5 text-stone-700">
-                      {guestCount > selectedPkg.baseGuests && (
+                      {extraGuestsCount > 0 && (
                         <div className="grid grid-cols-12 items-center">
-                          <div className="col-span-6">• จำนวนแขกผู้มาร่วมงานเพิ่ม</div>
-                          <div className="col-span-2 text-center">+{guestCount - selectedPkg.baseGuests} คน</div>
-                          <div className="col-span-2 text-right">—</div>
-                          <div className="col-span-2 text-right">ตามรายการเสริม</div>
+                          <div className="col-span-6">• รองรับแขกผู้มาร่วมงานเพิ่ม (อาหารว่าง น้ำดื่ม เก้าอี้รับรอง)</div>
+                          <div className="col-span-2 text-center">+{extraGuestsCount} คน</div>
+                          <div className="col-span-2 text-right">{EXTRA_GUEST_RATE.toLocaleString()} บาท</div>
+                          <div className="col-span-2 text-right font-semibold">{extraGuestsCost.toLocaleString()} บาท</div>
                         </div>
                       )}
 
@@ -1161,18 +1380,33 @@ export default function BookingPage() {
                 onChange={e => setPavilionId(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 text-sm font-medium bg-[#FDFBF7]"
               >
-                {(currentLocation?.pavilions || []).map(pav => (
-                  <option key={pav.id} value={pav.id}>
-                    {pav.name} (รองรับ {pav.capacity} คน)
-                  </option>
-                ))}
+                {activePavilions.length === 0 ? (
+                  <option value="">ไม่มีศาลาที่เปิดให้บริการ</option>
+                ) : (
+                  activePavilions.map(pav => (
+                    <option key={pav.id} value={pav.id}>
+                      {pav.name} (รองรับ {pav.capacity} คน)
+                    </option>
+                  ))
+                )}
               </select>
+              {(() => {
+                const selPav = activePavilions.find(p => p.id === pavilionId);
+                if (selPav && guestCount > (selPav.capacity || 200)) {
+                  return (
+                    <p className="mt-1.5 text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1">
+                      ⚠️ จำนวนแขกที่เลือก ({guestCount} คน) เกินความจุภายในศาลา ({selPav.capacity} คน) แนะนำให้เลือกศาลาใหญ่ หรือสั่งเต็นท์และโต๊ะเก้าอี้เสริมบริเวณลานหน้าศาลา
+                    </p>
+                  );
+                }
+                return null;
+              })()}
             </div>
           </div>
 
-          {/* กล่องปฏิทินตามรูปที่ 1 พร้อมแถบสีเชื่อมช่วงวันแบบ Agoda / Trip.com */}
+          {/* กล่องปฏิทิน */}
           <div className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200 shadow-sm max-w-3xl mx-auto">
-            <h2 className="font-bold text-lg text-stone-900 mb-3">Calendar</h2>
+            <h2 className="font-bold text-lg text-stone-900 mb-3">ปฏิทินตรวจสอบคิวศาลา</h2>
 
             <div className="flex items-center justify-between mb-5 px-2">
               <button
@@ -1184,7 +1418,7 @@ export default function BookingPage() {
               </button>
 
               <span className="font-bold text-base sm:text-lg text-stone-900">
-                {calendarMonth.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' })}
+                {calendarMonth.toLocaleDateString('th-TH', { month: 'long', year: 'numeric' })}
               </span>
 
               <button
@@ -1196,9 +1430,9 @@ export default function BookingPage() {
               </button>
             </div>
 
-            {/* หัวตาราง Sun - Sat */}
+            {/* หัวตาราง อา. - ส. */}
             <div className="grid grid-cols-7 gap-2 mb-2 text-center">
-              {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+              {['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'].map(day => (
                 <div key={day} className="py-1 rounded-full border border-stone-300 text-xs font-bold text-stone-800">
                   {day}
                 </div>
@@ -1216,6 +1450,7 @@ export default function BookingPage() {
                   );
                 }
 
+                const isPast = cell.dateStr < todayStr;
                 const status = getDateBookingStatus(cell.dateStr);
                 const isSelectedRange = startDate && cremationDate && cell.dateStr >= startDate && cell.dateStr <= cremationDate;
                 const isStart = cell.dateStr === startDate;
@@ -1225,20 +1460,21 @@ export default function BookingPage() {
                 return (
                   <div
                     key={idx}
-                    onClick={() => handleSelectCalendarDate(cell.dateStr)}
-                    className={`h-20 p-1.5 border-r border-b border-stone-200 relative cursor-pointer transition select-none ${
-                      status.isSelectedPavilionBooked
+                    onClick={() => !isPast && handleSelectCalendarDate(cell.dateStr)}
+                    className={`h-20 p-1.5 border-r border-b border-stone-200 relative transition select-none ${
+                      isPast
+                        ? 'bg-stone-100/70 text-stone-400 cursor-not-allowed'
+                        : status.isSelectedPavilionBooked
                         ? 'bg-red-50/60 cursor-not-allowed'
                         : isSelectedRange
-                        ? 'bg-emerald-50/80'
-                        : 'hover:bg-amber-50/50'
+                        ? 'bg-emerald-50/80 cursor-pointer'
+                        : 'hover:bg-amber-50/50 cursor-pointer'
                     }`}
                   >
-                    <span className={`text-sm font-medium ${isStart || isEnd ? 'font-bold text-emerald-900' : 'text-stone-800'}`}>
+                    <span className={`text-sm font-medium ${isPast ? 'text-stone-400' : isStart || isEnd ? 'font-bold text-emerald-900' : 'text-stone-800'}`}>
                       {cell.day}
                     </span>
 
-                    {/* แถบสีชมพูแสดงคิวที่มีคนจองแล้ว (เหมือนในรูปที่ 1) */}
                     {status.bookedPavilionsCount > 0 && (
                       <div
                         className={`mt-1 h-4 rounded-full px-1.5 text-[9px] font-semibold flex items-center truncate ${
@@ -1247,11 +1483,10 @@ export default function BookingPage() {
                             : 'bg-amber-200 text-amber-900'
                         }`}
                       >
-                        {status.isAllZonesFull ? 'เต็มทุกโซน' : 'จองแล้ว 1 โซน'}
+                        {status.isAllZonesFull ? 'เต็มทุกโซน' : `จองแล้ว ${status.bookedPavilionsCount} โซน`}
                       </div>
                     )}
 
-                    {/* แถบสีเขียวเชื่อมช่วงวันที่ลูกค้ากำลังเลือก (Trip.com / Agoda Style) */}
                     {isSelectedRange && (
                       <div
                         className={`mt-1 h-5 bg-[#3D7352] text-white text-[9px] font-semibold flex items-center justify-center ${
@@ -1273,7 +1508,7 @@ export default function BookingPage() {
             </div>
           </div>
 
-          {/* คำอธิบายสีสถานะตามรูปที่ 1 */}
+          {/* คำอธิบายสีสถานะ */}
           <div className="flex flex-wrap items-center justify-center gap-8 my-6 text-xs font-bold text-[#5C3D1E]">
             <div className="flex items-center gap-2">
               <span className="w-4 h-4 rounded-full bg-emerald-500 inline-block" />
@@ -1281,7 +1516,7 @@ export default function BookingPage() {
             </div>
             <div className="flex items-center gap-2">
               <span className="w-4 h-4 rounded-full bg-amber-500 inline-block" />
-              <span>จองแล้ว 1 โซน (ยังพอมีคิว)</span>
+              <span>จองแล้วบางโซน (ยังพอมีคิว)</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-4 h-4 rounded-full bg-red-500 inline-block" />
@@ -1289,7 +1524,7 @@ export default function BookingPage() {
             </div>
           </div>
 
-          {/* ระบุกำหนดการ 3 ช่อง ตามรูปที่ 1 */}
+          {/* ระบุกำหนดการ 3 ช่อง */}
           <div className="mt-8 space-y-4">
             <h3 className="font-bold text-base text-stone-900">ระบุกำหนดการ</h3>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -1298,6 +1533,7 @@ export default function BookingPage() {
                 <div className="relative">
                   <input
                     type="date"
+                    min={todayStr}
                     value={startDate}
                     onChange={e => handleSelectCalendarDate(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-[#7C6032] bg-white text-sm"
@@ -1309,8 +1545,15 @@ export default function BookingPage() {
                 <div className="relative">
                   <input
                     type="date"
+                    min={startDate || todayStr}
                     value={cremationDate}
-                    onChange={e => setCremationDate(e.target.value)}
+                    onChange={e => {
+                      const nextCrem = e.target.value;
+                      setCremationDate(nextCrem);
+                      if (nextCrem) {
+                        setBoneDate(addDaysToDateStr(nextCrem, 1));
+                      }
+                    }}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-[#7C6032] bg-white text-sm"
                   />
                 </div>
@@ -1320,6 +1563,7 @@ export default function BookingPage() {
                 <div className="relative">
                   <input
                     type="date"
+                    min={cremationDate || startDate || todayStr}
                     value={boneDate}
                     onChange={e => setBoneDate(e.target.value)}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-[#7C6032] bg-white text-sm"
@@ -1385,19 +1629,25 @@ export default function BookingPage() {
               <div className="bg-[#FAF6EE] p-4 rounded-2xl border border-[#E6DAC3] space-y-2">
                 <p className="font-bold text-stone-900 text-base">สรุปยอดค่าใช้จ่าย</p>
                 <div className="flex justify-between">
-                  <span>{selectedPkg.name} (แขก {guestCount} คน)</span>
+                  <span>{selectedPkg.name} (แขกตั้งต้น {selectedPkg.baseGuests} คน)</span>
                   <span className="font-semibold">{selectedPkg.price.toLocaleString()} บาท</span>
                 </div>
+                {extraGuestsCount > 0 && (
+                  <div className="flex justify-between">
+                    <span>รองรับแขกเพิ่ม (+{extraGuestsCount} คน)</span>
+                    <span className="font-semibold">+{extraGuestsCost.toLocaleString()} บาท</span>
+                  </div>
+                )}
                 {ritualUpgradePrice > 0 && (
                   <div className="flex justify-between">
                     <span>ค่าอัปเกรดพิธีกรรม</span>
                     <span className="font-semibold">+{ritualUpgradePrice.toLocaleString()} บาท</span>
                   </div>
                 )}
-                {addonsTotal > 0 && (
+                {addonsOnlyTotal > 0 && (
                   <div className="flex justify-between">
                     <span>บริการเสริมพิเศษ ({addonItemsList.length} รายการ)</span>
-                    <span className="font-semibold">+{addonsTotal.toLocaleString()} บาท</span>
+                    <span className="font-semibold">+{addonsOnlyTotal.toLocaleString()} บาท</span>
                   </div>
                 )}
                 <div className="pt-2 border-t border-[#E6DAC3] flex justify-between text-base font-bold text-[#2E5A44]">
@@ -1459,6 +1709,12 @@ export default function BookingPage() {
                 <Clock className="w-5 h-5 text-[#9B7B45]" />
                 กำหนดวันและเวลานัดหมายติดต่อเจ้าหน้าที่ ณ ศูนย์บริการบ้านวิเวก
               </h3>
+              {step4Error && (
+                <div className="p-3.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs sm:text-sm flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 shrink-0" />
+                  <span>{step4Error}</span>
+                </div>
+              )}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-xl">
                 <div>
                   <label className="block text-xs font-medium text-stone-700 mb-1">
@@ -1466,8 +1722,13 @@ export default function BookingPage() {
                   </label>
                   <input
                     type="date"
+                    min={todayStr}
+                    max={startDate || undefined}
                     value={appointmentDate}
-                    onChange={e => setAppointmentDate(e.target.value)}
+                    onChange={e => {
+                      setAppointmentDate(e.target.value);
+                      setStep4Error('');
+                    }}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 text-sm"
                   />
                 </div>
@@ -1501,10 +1762,11 @@ export default function BookingPage() {
             </button>
             <button
               type="button"
+              disabled={isSubmitting}
               onClick={handleSubmitBooking}
-              className="px-8 py-3 rounded-xl bg-[#3D7352] hover:bg-[#2E5A44] text-white text-sm font-semibold shadow-lg transition"
+              className="px-8 py-3 rounded-xl bg-[#3D7352] hover:bg-[#2E5A44] disabled:opacity-60 text-white text-sm font-semibold shadow-lg transition"
             >
-              ยืนยันส่งข้อมูลประสงค์จัดงาน
+              {isSubmitting ? 'กำลังส่งคำขอจัดงาน...' : 'ยืนยันส่งข้อมูลประสงค์จัดงาน'}
             </button>
           </div>
         </div>

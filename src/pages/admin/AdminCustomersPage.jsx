@@ -25,7 +25,7 @@ export default function AdminCustomersPage() {
         <div className="relative w-full sm:w-72">
           <input
             type="text"
-            placeholder="search..."
+            placeholder="ค้นหาเลขงาน / ชื่อผู้เสียชีวิต / เจ้าภาพ..."
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="w-full pl-4 pr-10 py-2 rounded-full border border-stone-300 bg-white text-sm focus:outline-none focus:border-[#9B7B45]"
@@ -34,7 +34,7 @@ export default function AdminCustomersPage() {
         </div>
       </div>
 
-      {/* การ์ดแถวยาวตามรูปดีไซน์ Admin ข้อมูล/รายละเอียดลูกค้า */}
+      {/* การ์ดแถวยาวรายการลูกค้า */}
       <div className="space-y-4">
         {filtered.map(b => (
           <div
@@ -74,13 +74,15 @@ export default function AdminCustomersPage() {
               <span
                 className={`px-4 py-1.5 rounded-full text-xs font-bold ${
                   b.status === 'รออนุมัติ'
-                    ? 'bg-red-100 text-red-700'
+                    ? 'bg-amber-100 text-amber-800'
                     : b.status === 'กำลังดำเนินงาน'
                     ? 'bg-blue-200 text-blue-900'
+                    : b.status === 'ยกเลิก'
+                    ? 'bg-red-100 text-red-700'
                     : 'bg-emerald-100 text-emerald-800'
                 }`}
               >
-                {b.status === 'กำลังดำเนินงาน' ? 'กำลังดำเนินการ' : b.status}
+                {b.status}
               </span>
             </div>
           </div>

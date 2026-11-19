@@ -26,6 +26,7 @@ export default function AdminPackagesPage() {
 
   const [activeTab, setActiveTab] = useState('MAIN_PACKAGES'); // 'MAIN_PACKAGES' | 'ADDONS'
   const [search, setSearch] = useState('');
+  const [addonSearch, setAddonSearch] = useState('');
   const [editingPkg, setEditingPkg] = useState(null);
   const [editingService, setEditingService] = useState(null);
   const [openCatId, setOpenCatId] = useState(1);
@@ -74,19 +75,35 @@ export default function AdminPackagesPage() {
   const handleSavePackageForm = (e) => {
     e.preventDefault();
     if (!editingPkg.name.trim()) return;
+    const parsedPrice = Number(editingPkg.price);
+    const parsedBaseGuests = Math.max(1, Number(editingPkg.baseGuests) || 50);
+    const parsedMaxGuests = Math.max(
+      parsedBaseGuests,
+      Number(editingPkg.maxGuests) || parsedBaseGuests + 50
+    );
+    const parsedDays = Math.max(1, Number(editingPkg.durationDays) || 1);
+    const parsedNights = Math.max(
+      0,
+      Number.isFinite(Number(editingPkg.durationNights)) && editingPkg.durationNights !== ''
+        ? Number(editingPkg.durationNights)
+        : Math.max(0, parsedDays - 1)
+    );
+
     const updated = {
       ...editingPkg,
-      price: Number(editingPkg.price) || 25000,
-      baseGuests: Number(editingPkg.baseGuests) || 50,
-      durationDays: Number(editingPkg.durationDays) || 3,
-      durationNights: Number(editingPkg.durationNights) || 2,
-      durationText: `${editingPkg.durationDays} วัน ${editingPkg.durationNights} คืน (สวด ${editingPkg.durationNights} คืน)`
+      name: editingPkg.name.trim(),
+      price: Number.isFinite(parsedPrice) && parsedPrice >= 0 ? parsedPrice : 25000,
+      baseGuests: parsedBaseGuests,
+      maxGuests: parsedMaxGuests,
+      durationDays: parsedDays,
+      durationNights: parsedNights,
+      durationText: `${parsedDays} วัน ${parsedNights} คืน (สวด ${parsedNights} คืน)`
     };
     savePackage(updated);
     setEditingPkg(null);
   };
 
-  // หากกำลังเปิดหน้า "เพิ่ม/แก้ไขแพ็กเกจ" (ตามรูปที่ 13 ของ Admin)
+  // หากกำลังเปิดหน้า "เพิ่ม/แก้ไขแพ็กเกจ"
   if (editingPkg) {
     return (
       <form onSubmit={handleSavePackageForm} className="max-w-4xl space-y-6 pb-12">
@@ -165,22 +182,34 @@ export default function AdminPackagesPage() {
           {/* 2. ราคาและเงื่อนไขแพ็กเกจ */}
           <div className="space-y-4">
             <h2 className="font-bold text-sm text-stone-900">2. ราคาและเงื่อนไขแพ็กเกจ</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
                 <label className="block text-xs font-medium text-stone-700 mb-1">ราคา (บาท)</label>
                 <input
                   type="number"
+                  min="0"
                   value={editingPkg.price}
                   onChange={e => setEditingPkg({ ...editingPkg, price: e.target.value })}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 text-sm"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium text-stone-700 mb-1">รองรับแขก (คน)</label>
+                <label className="block text-xs font-medium text-stone-700 mb-1">รองรับแขกมาตรฐาน (คน)</label>
                 <input
                   type="number"
+                  min="1"
                   value={editingPkg.baseGuests}
                   onChange={e => setEditingPkg({ ...editingPkg, baseGuests: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-stone-700 mb-1">รองรับแขกสูงสุด (คน)</label>
+                <input
+                  type="number"
+                  min={editingPkg.baseGuests || 1}
+                  value={editingPkg.maxGuests ?? editingPkg.baseGuests}
+                  onChange={e => setEditingPkg({ ...editingPkg, maxGuests: e.target.value })}
                   className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200 text-sm"
                 />
               </div>
@@ -192,6 +221,7 @@ export default function AdminPackagesPage() {
                 <div className="flex items-center border border-stone-200 rounded-xl overflow-hidden">
                   <input
                     type="number"
+                    min="1"
                     value={editingPkg.durationDays}
                     onChange={e => setEditingPkg({ ...editingPkg, durationDays: e.target.value })}
                     className="w-24 px-3 py-2 text-sm focus:outline-none"
@@ -201,6 +231,7 @@ export default function AdminPackagesPage() {
                 <div className="flex items-center border border-stone-200 rounded-xl overflow-hidden">
                   <input
                     type="number"
+                    min="0"
                     value={editingPkg.durationNights}
                     onChange={e => setEditingPkg({ ...editingPkg, durationNights: e.target.value })}
                     className="w-24 px-3 py-2 text-sm focus:outline-none"
@@ -320,6 +351,21 @@ export default function AdminPackagesPage() {
     );
   }
 
+  const filteredAddons = services.filter(srv => {
+    const q = addonSearch.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      srv.name.toLowerCase().includes(q) ||
+      (srv.category || '').toLowerCase().includes(q) ||
+      (srv.department || '').toLowerCase().includes(q)
+    );
+  });
+
+  const serviceDeptOptions =
+    editingService && editingService.department && !departments.includes(editingService.department)
+      ? [editingService.department, ...departments]
+      : departments;
+
   return (
     <div className="max-w-5xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -352,7 +398,7 @@ export default function AdminPackagesPage() {
               <div className="relative w-64">
                 <input
                   type="text"
-                  placeholder="search..."
+                  placeholder="ค้นหาชื่อแพ็กเกจ..."
                   value={search}
                   onChange={e => setSearch(e.target.value)}
                   className="w-full pl-4 pr-9 py-2 rounded-full border border-stone-300 bg-white text-xs"
@@ -368,14 +414,13 @@ export default function AdminPackagesPage() {
             </div>
           </div>
 
-          {/* การ์ดแถวยาว 4 แพ็กเกจ ตามรูปที่ 7 ของ Admin */}
           <div className="space-y-4">
             {packages
               .filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
               .map(pkg => (
                 <div
                   key={pkg.id}
-                  className="bg-white rounded-2xl p-5 border border-stone-200 shadow-sm flex items-center justify-between"
+                  className="bg-white rounded-2xl p-5 border border-stone-200 shadow-sm flex flex-wrap items-center justify-between gap-4"
                 >
                   <div className="flex items-center gap-5">
                     <div className="w-12 h-12 rounded-full bg-stone-200 flex items-center justify-center text-stone-700">
@@ -397,7 +442,7 @@ export default function AdminPackagesPage() {
                   </div>
 
                   <div className="text-sm font-medium text-stone-800">
-                    ราคา : <strong>{pkg.price.toLocaleString()}</strong> บาท
+                    ราคา : <strong>{Number(pkg.price || 0).toLocaleString()}</strong> บาท
                   </div>
 
                   <div className="flex items-center gap-3">
@@ -426,36 +471,50 @@ export default function AdminPackagesPage() {
         </>
       ) : (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs text-stone-600">
               รายการบริการเสริมที่นี่จะถูกดึงไปแสดงที่หน้าเลือกบริการเสริม (Step 2) ของลูกค้าโดยตรง
             </p>
-            <button
-              onClick={() =>
-                setEditingService({
-                  id: '',
-                  category: 'หมวดสถานที่ อุปกรณ์ และการอำนวยความสะดวก',
-                  name: '',
-                  unit: 'ชุด',
-                  price: 300,
-                  department: departments[0] || 'ฝ่ายสถานที่',
-                  remark: '',
-                  isActive: true
-                })
-              }
-              className="px-4 py-2 rounded-xl bg-[#2E5A44] text-white text-xs font-semibold flex items-center gap-1"
-            >
-              <Plus className="w-4 h-4" /> เพิ่มบริการเสริม (Add-on)
-            </button>
+            <div className="flex flex-wrap items-center gap-2.5">
+              <div className="relative w-60">
+                <input
+                  type="text"
+                  placeholder="ค้นหาชื่อบริการเสริม / แผนก"
+                  value={addonSearch}
+                  onChange={e => setAddonSearch(e.target.value)}
+                  className="w-full pl-4 pr-9 py-2 rounded-full border border-stone-300 bg-white text-xs"
+                />
+                <Search className="w-4 h-4 text-stone-400 absolute right-3 top-2.5" />
+              </div>
+              <button
+                onClick={() =>
+                  setEditingService({
+                    id: '',
+                    category: 'หมวดสถานที่ อุปกรณ์ และการอำนวยความสะดวก',
+                    name: '',
+                    unit: 'ชุด',
+                    price: 300,
+                    department: departments[0] || 'ฝ่ายสถานที่',
+                    remark: '',
+                    isActive: true
+                  })
+                }
+                className="px-4 py-2 rounded-xl bg-[#2E5A44] text-white text-xs font-semibold flex items-center gap-1"
+              >
+                <Plus className="w-4 h-4" /> เพิ่มบริการเสริม (Add-on)
+              </button>
+            </div>
           </div>
 
           {editingService && (
             <form
               onSubmit={e => {
                 e.preventDefault();
+                if (!editingService.name.trim()) return;
                 saveServiceAddon({
                   ...editingService,
-                  price: Number(editingService.price) || 0
+                  name: editingService.name.trim(),
+                  price: Math.max(0, Number(editingService.price) || 0)
                 });
                 setEditingService(null);
               }}
@@ -491,6 +550,7 @@ export default function AdminPackagesPage() {
                   <label className="block font-medium mb-1">ราคาต่อหน่วย (บาท) *</label>
                   <input
                     type="number"
+                    min="0"
                     required
                     value={editingService.price}
                     onChange={e => setEditingService({ ...editingService, price: e.target.value })}
@@ -513,7 +573,7 @@ export default function AdminPackagesPage() {
                     onChange={e => setEditingService({ ...editingService, department: e.target.value })}
                     className="w-full px-3 py-2 rounded-lg border border-stone-300 bg-white"
                   >
-                    {departments.map(d => (
+                    {serviceDeptOptions.map(d => (
                       <option key={d} value={d}>{d}</option>
                     ))}
                   </select>
@@ -547,54 +607,70 @@ export default function AdminPackagesPage() {
           )}
 
           <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-sm">
-            <table className="w-full text-xs text-left">
-              <thead className="bg-stone-100 text-stone-700 font-bold border-b border-stone-200">
-                <tr>
-                  <th className="py-3 px-4">รายการเสริม</th>
-                  <th className="py-3 px-4">หมวดหมู่</th>
-                  <th className="py-3 px-4">แผนกรับผิดชอบ</th>
-                  <th className="py-3 px-4 text-right">ราคาต่อหน่วย</th>
-                  <th className="py-3 px-4 text-center">สถานะ</th>
-                  <th className="py-3 px-4 text-right">จัดการ</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-stone-100">
-                {services.map(srv => (
-                  <tr key={srv.id} className="hover:bg-stone-50">
-                    <td className="py-3 px-4 font-semibold text-stone-900">{srv.name}</td>
-                    <td className="py-3 px-4 text-stone-600">{srv.category}</td>
-                    <td className="py-3 px-4 text-stone-600">{srv.department}</td>
-                    <td className="py-3 px-4 text-right font-bold text-stone-800">
-                      {srv.price.toLocaleString()} บาท / {srv.unit}
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <button
-                        onClick={() => saveServiceAddon({ ...srv, isActive: !srv.isActive })}
-                        className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
-                          srv.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-200 text-stone-600'
-                        }`}
-                      >
-                        {srv.isActive ? 'เปิดใช้งาน' : 'ซ่อน'}
-                      </button>
-                    </td>
-                    <td className="py-3 px-4 text-right space-x-2">
-                      <button
-                        onClick={() => setEditingService(srv)}
-                        className="p-1.5 text-blue-800 hover:bg-stone-100 rounded"
-                      >
-                        <Pencil className="w-3.5 h-3.5 inline" />
-                      </button>
-                      <button
-                        onClick={() => deleteServiceAddon(srv.id)}
-                        className="p-1.5 text-red-600 hover:bg-red-50 rounded"
-                      >
-                        <Trash2 className="w-3.5 h-3.5 inline" />
-                      </button>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs text-left min-w-[680px]">
+                <thead className="bg-stone-100 text-stone-700 font-bold border-b border-stone-200">
+                  <tr>
+                    <th className="py-3 px-4">รายการเสริม</th>
+                    <th className="py-3 px-4">หมวดหมู่</th>
+                    <th className="py-3 px-4">แผนกรับผิดชอบ</th>
+                    <th className="py-3 px-4 text-right">ราคาต่อหน่วย</th>
+                    <th className="py-3 px-4 text-center">สถานะ</th>
+                    <th className="py-3 px-4 text-right">จัดการ</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {filteredAddons.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="py-8 text-center text-stone-400">
+                        ไม่พบบริการเสริมที่ตรงกับคำค้นหา
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredAddons.map(srv => (
+                      <tr key={srv.id} className="hover:bg-stone-50">
+                        <td className="py-3 px-4 font-semibold text-stone-900">{srv.name}</td>
+                        <td className="py-3 px-4 text-stone-600">{srv.category}</td>
+                        <td className="py-3 px-4 text-stone-600">{srv.department}</td>
+                        <td className="py-3 px-4 text-right font-bold text-stone-800">
+                          {Number(srv.price || 0).toLocaleString()} บาท / {srv.unit}
+                        </td>
+                        <td className="py-3 px-4 text-center">
+                          <button
+                            onClick={() => saveServiceAddon({ ...srv, isActive: !srv.isActive })}
+                            className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold ${
+                              srv.isActive ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-200 text-stone-600'
+                            }`}
+                          >
+                            {srv.isActive ? 'เปิดใช้งาน' : 'ซ่อน'}
+                          </button>
+                        </td>
+                        <td className="py-3 px-4 text-right space-x-2">
+                          <button
+                            onClick={() => setEditingService(srv)}
+                            className="p-1.5 text-blue-800 hover:bg-stone-100 rounded"
+                            title="แก้ไขบริการเสริม"
+                          >
+                            <Pencil className="w-3.5 h-3.5 inline" />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (window.confirm(`ต้องการลบบริการเสริม "${srv.name}" ใช่หรือไม่?`)) {
+                                deleteServiceAddon(srv.id);
+                              }
+                            }}
+                            className="p-1.5 text-red-600 hover:bg-red-50 rounded"
+                            title="ลบบริการเสริม"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 inline" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

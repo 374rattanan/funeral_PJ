@@ -30,7 +30,9 @@ BEGIN
 
     -- อัปเดตคอลัมน์ is_recommended ในตาราง packages ให้เป็น TRUE เฉพาะแพ็กเกจอันดับ 1
     UPDATE public.packages
-    SET is_recommended = (package_id = v_top_package_id);
+    SET is_recommended = (package_id = v_top_package_id)
+    WHERE package_id IS NOT NULL
+      AND is_recommended IS DISTINCT FROM (package_id = v_top_package_id);
 
     RETURN NULL;
 END;
@@ -66,5 +68,6 @@ BEGIN
     END IF;
 
     UPDATE public.packages
-    SET is_recommended = (package_id = v_top_package_id);
+    SET is_recommended = (package_id = v_top_package_id)
+    WHERE package_id IS NOT NULL;
 END $$;
