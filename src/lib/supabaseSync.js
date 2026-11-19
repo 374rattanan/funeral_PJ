@@ -71,7 +71,8 @@ export async function fetchAllDataFromSupabase() {
       supabase.from('departments').select('*').order('department_id', { ascending: true }),
       supabase.from('community_workers').select('*').order('worker_id', { ascending: true }),
       supabase.from('temples').select('*').order('temple_id', { ascending: true }),
-      supabase.from('temple_images').select('*').order('sort_order', { ascending: true }),
+      supabase.from('temple_images').select('*'),
+      // supabase.from('temple_images').select('*').order('sort_order', { ascending: true }),
       supabase.from('pavilions').select('*').order('pavilion_id', { ascending: true }),
       supabase.from('packages').select('*').order('package_id', { ascending: true }),
       supabase.from('items').select('*').order('item_id', { ascending: true }),
@@ -926,8 +927,8 @@ export async function syncSaveLocationToSupabase(loc) {
         await supabase.from('temple_images').insert(
           loc.images.map((url, i) => ({
             temple_id: targetTempleId,
-            image_url: url,
-            sort_order: i + 1
+            image_url: url
+            // sort_order: i + 1
           }))
         );
       }

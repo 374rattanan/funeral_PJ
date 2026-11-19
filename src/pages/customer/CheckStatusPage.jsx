@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { buildFullScheduleItems } from '../../data/initialData';
+import QuotationPrintView from '../../components/QuotationPrintView';
 
 export default function CheckStatusPage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -221,6 +222,17 @@ export default function CheckStatusPage() {
 
   const timelineSteps = getTimelineSteps();
 
+  // เพิ่มฟังก์ชันสั่งพิมพ์พร้อมตั้งชื่อไฟล์อัตโนมัติ
+  const handlePrintQuotation = () => {
+    if (!booking) return;
+    const originalTitle = document.title;
+    document.title = `ใบเสนอราคา_${booking.id}`;
+    window.print();
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 500);
+  };
+
   // หากกดปุ่ม "รายละเอียด" บนการ์ดงานศพ จะแสดงหน้าตารางแจกแจงรายการของงานศพนั้น + ปุ่ม Quotation PDF (ตามรูปที่ 6)
   if (showFullSheet && booking) {
     const scheduleGroups = buildFullScheduleItems(booking.packageId);
@@ -367,13 +379,16 @@ export default function CheckStatusPage() {
           </button>
 
           <button
-            onClick={() => window.print()}
+            onClick={handlePrintQuotation}
             className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-semibold flex items-center gap-2 shadow"
           >
             <FileDown className="w-4 h-4" />
             ดาวน์โหลดใบเสนอราคา (Quotation PDF)
           </button>
         </div>
+
+        {/* เอกสารใบเสนอราคา A4 (แสดงเฉพาะตอนสั่ง Print / Save as PDF) */}
+        <QuotationPrintView booking={booking} />
       </div>
     );
   }

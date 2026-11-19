@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useSearchParams, Link, useNavigate } from 'react-router-dom';
-import { CheckCircle2, Copy, Search, Printer, ShieldCheck, Calendar, MapPin } from 'lucide-react';
+import { CheckCircle2, Copy, Search, FileDown, ShieldCheck, Calendar, MapPin } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
+import QuotationPrintView from '../../components/QuotationPrintView';
 
 export default function BookingSuccessPage() {
   const [searchParams] = useSearchParams();
@@ -23,6 +24,16 @@ export default function BookingSuccessPage() {
   const handleGoAdminApprove = () => {
     loginAsAdmin();
     navigate(`/admin/requests/${booking.id}`);
+  };
+
+  const handlePrintQuotation = () => {
+    if (!booking) return;
+    const originalTitle = document.title;
+    document.title = `ใบเสนอราคา_${booking.id}`;
+    window.print();
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 500);
   };
 
   return (
@@ -89,11 +100,11 @@ export default function BookingSuccessPage() {
           </Link>
 
           <button
-            onClick={() => window.print()}
-            className="px-5 py-3 rounded-xl border border-stone-300 bg-white hover:bg-stone-100 text-stone-700 text-sm font-medium flex items-center gap-2 transition"
+            onClick={handlePrintQuotation}
+            className="px-5 py-3 rounded-xl border border-stone-300 bg-white hover:bg-stone-100 text-stone-700 text-sm font-semibold flex items-center gap-2 transition"
           >
-            <Printer className="w-4 h-4" />
-            พิมพ์ใบคำขอ
+            <FileDown className="w-4 h-4" />
+            ดาวน์โหลดใบเสนอราคา
           </button>
 
           <button
@@ -105,6 +116,9 @@ export default function BookingSuccessPage() {
           </button>
         </div>
       </div>
+
+      {/* เอกสารใบเสนอราคา A4 (แสดงเฉพาะตอนกดโหลด/พิมพ์) */}
+      <QuotationPrintView booking={booking} />
     </div>
   );
 }
