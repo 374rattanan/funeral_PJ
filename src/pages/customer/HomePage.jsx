@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, ChevronLeft, ChevronRight, Users, MapPin, Sparkles, FileCheck2 } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, ClipboardList, FileText, CalendarCheck, CheckCircle2 } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { PORTFOLIO_ITEMS } from '../../data/initialData';
 
@@ -42,61 +42,106 @@ export default function HomePage() {
 
   return (
     <div className="space-y-16 pb-8">
-      {/* Hero Section ตามรูปดีไซน์ */}
-      <section className="relative bg-stone-900 overflow-hidden min-h-[340px] sm:min-h-[420px] flex items-center">
-        <img
-          src="/images/header-banner.png"
-          alt="แบนเนอร์ วิสาหกิจชุมชนบ้านวิเวก"
-          className="absolute inset-0 w-full h-full object-cover object-center opacity-55"
-        />
-        <div className="absolute inset-0 bg-gradient-to-r from-stone-900/75 via-stone-900/40 to-transparent" />
+      {/* Hero Section + แถบ 4 ขั้นตอนการใช้บริการ */}
+      <div>
+        <section className="relative bg-stone-900 overflow-hidden min-h-[340px] sm:min-h-[420px] flex items-center">
+          <img
+            src="/images/header-banner.png"
+            alt="แบนเนอร์ วิสาหกิจชุมชนบ้านวิเวก"
+            className="absolute inset-0 w-full h-full object-cover object-center opacity-55"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-stone-900/75 via-stone-900/40 to-transparent" />
 
-        <div className="relative w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-16">
-          <h1 className="text-2xl sm:text-4xl font-bold text-white drop-shadow leading-snug">
-            ยินดีต้อนรับ วิสาหกิจชุมชนบ้านวิเวก
-          </h1>
-          <p className="mt-2 text-lg sm:text-2xl text-amber-100 font-medium drop-shadow">
-            ระบบจัดงานศพแบบครบวงจร<br />
-            “ช่วยให้การจัดงานเป็นเรื่องง่าย”
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link
-              to="/packages"
-              className="px-6 py-3 rounded-full bg-[#C5A572] hover:bg-[#B28F58] text-white font-semibold text-sm shadow-lg transition"
-            >
-              แพ็กเกจการจัดงาน
-            </Link>
-            <Link
-              to="/check-status"
-              className="px-6 py-3 rounded-full bg-white/90 hover:bg-white text-stone-800 font-semibold text-sm shadow-lg transition"
-            >
-              ตรวจสอบสถานะการจัดงาน
-            </Link>
+          <div className="relative w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-16">
+            <h1 className="text-2xl sm:text-4xl font-bold text-white drop-shadow leading-snug">
+              ยินดีต้อนรับ วิสาหกิจชุมชนบ้านวิเวก
+            </h1>
+            <p className="mt-2 text-lg sm:text-2xl text-amber-100 font-medium drop-shadow">
+              ระบบจัดงานศพแบบครบวงจร<br />
+              “ช่วยให้การจัดงานเป็นเรื่องง่าย”
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link
+                to="/packages"
+                className="px-6 py-3 rounded-full bg-[#C5A572] hover:bg-[#B28F58] text-white font-semibold text-sm shadow-lg transition"
+              >
+                แพ็กเกจการจัดงาน
+              </Link>
+              <Link
+                to="/check-status"
+                className="px-6 py-3 rounded-full bg-white/90 hover:bg-white text-stone-800 font-semibold text-sm shadow-lg transition"
+              >
+                ตรวจสอบสถานะการจัดงาน
+              </Link>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* 4 Icons Bar ลอยทับขอบล่าง Hero ตามรูป */}
-      <section className="max-w-4xl mx-auto px-4 -mt-24 relative z-10">
-        <div className="bg-white rounded-2xl shadow-lg border border-stone-200 grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-stone-200 py-5">
-          <div className="flex flex-col items-center justify-center p-3 text-center">
-            <Users className="w-8 h-8 text-stone-800 mb-2" />
-            <span className="font-semibold text-xs sm:text-sm text-stone-800">ชุมชนดูแลด้วยใจ</span>
+        {/* แถบ 4 ขั้นตอนการใช้บริการ (How It Works) ลอยทับขอบล่าง Hero */}
+        <section className="max-w-5xl mx-auto px-4 sm:px-6 -mt-8 sm:-mt-12 relative z-10">
+          <div className="bg-white rounded-2xl shadow-lg border border-[#E6DAC3] overflow-hidden">
+            <div className="bg-[#FAF6EE] border-b border-[#EFE6D5] px-5 py-2.5 text-center">
+              <p className="text-xs font-semibold text-[#7C6032] tracking-wide">
+                ขั้นตอนการใช้บริการง่าย ๆ 4 ขั้นตอน
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y lg:divide-y-0 lg:divide-x divide-stone-200 items-stretch">
+              <div className="flex flex-col items-center text-center p-5">
+                <div className="flex items-center gap-2 mb-2.5">
+                  <span className="w-6 h-6 rounded-full bg-[#C5A572] text-white text-xs font-bold flex items-center justify-center">
+                    1
+                  </span>
+                  <ClipboardList className="w-5 h-5 text-[#7C6032]" />
+                </div>
+                <h3 className="font-bold text-sm text-stone-800">เลือกแพ็กเกจและพิธีกรรม</h3>
+                <p className="text-xs text-stone-500 mt-1 leading-relaxed">
+                  ปรับรูปแบบพิธี จำนวนแขก และรายการเสริมได้ตามต้องการ
+                </p>
+              </div>
+
+              <div className="flex flex-col items-center text-center p-5">
+                <div className="flex items-center gap-2 mb-2.5">
+                  <span className="w-6 h-6 rounded-full bg-[#C5A572] text-white text-xs font-bold flex items-center justify-center">
+                    2
+                  </span>
+                  <FileText className="w-5 h-5 text-[#7C6032]" />
+                </div>
+                <h3 className="font-bold text-sm text-stone-800">ส่งคำขอและรับใบเสนอราคา</h3>
+                <p className="text-xs text-stone-500 mt-1 leading-relaxed">
+                  ดาวน์โหลดใบเสนอราคา PDF ไปปรึกษาครอบครัวได้ทันที
+                </p>
+              </div>
+
+              <div className="flex flex-col items-center text-center p-5">
+                <div className="flex items-center gap-2 mb-2.5">
+                  <span className="w-6 h-6 rounded-full bg-[#C5A572] text-white text-xs font-bold flex items-center justify-center">
+                    3
+                  </span>
+                  <CalendarCheck className="w-5 h-5 text-[#7C6032]" />
+                </div>
+                <h3 className="font-bold text-sm text-stone-800">นัดหมายชำระเงินที่ศูนย์ฯ</h3>
+                <p className="text-xs text-stone-500 mt-1 leading-relaxed">
+                  เลือกชำระเต็มจำนวน หรือแบ่งชำระ 2 งวดอย่างโปร่งใส
+                </p>
+              </div>
+
+              <div className="flex flex-col items-center text-center p-5">
+                <div className="flex items-center gap-2 mb-2.5">
+                  <span className="w-6 h-6 rounded-full bg-[#C5A572] text-white text-xs font-bold flex items-center justify-center">
+                    4
+                  </span>
+                  <CheckCircle2 className="w-5 h-5 text-[#2E5A44]" />
+                </div>
+                <h3 className="font-bold text-sm text-stone-800">ติดตามความคืบหน้าทุกฝ่าย</h3>
+                <p className="text-xs text-stone-500 mt-1 leading-relaxed">
+                  ตรวจสอบสถานะและดูรูปหน้างานจริงครบทั้ง 8 ฝ่ายออนไลน์
+                </p>
+              </div>
+            </div>
           </div>
-          <div className="flex flex-col items-center justify-center p-3 text-center">
-            <MapPin className="w-8 h-8 text-stone-800 mb-2" />
-            <span className="font-semibold text-xs sm:text-sm text-stone-800">สถานที่พร้อมบริการ</span>
-          </div>
-          <div className="flex flex-col items-center justify-center p-3 text-center">
-            <Sparkles className="w-8 h-8 text-stone-800 mb-2" />
-            <span className="font-semibold text-xs sm:text-sm text-stone-800">พิธีการทางศาสนา</span>
-          </div>
-          <div className="flex flex-col items-center justify-center p-3 text-center">
-            <FileCheck2 className="w-8 h-8 text-stone-800 mb-2" />
-            <span className="font-semibold text-xs sm:text-sm text-stone-800">แพ็กเกจโปร่งใส</span>
-          </div>
-        </div>
-      </section>
+        </section>
+      </div>
 
       {/* แพ็กเกจของเรา (แสดงทีละ 3 แพ็กเกจ พร้อมปุ่มเลื่อนซ้าย-ขวา) */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
