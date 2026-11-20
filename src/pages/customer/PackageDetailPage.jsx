@@ -4,6 +4,7 @@ import { CheckCircle2, FileDown, ArrowLeft, AlertCircle } from 'lucide-react';
 import { useApp } from '../../context/AppContext';
 import { buildFullScheduleItems } from '../../data/initialData';
 import { SITE_CONFIG } from '../../config/siteConfig';
+import PackageDetailPrintView from '../../components/PackageDetailPrintView';
 
 export default function PackageDetailPage() {
   const { id } = useParams();
@@ -68,7 +69,19 @@ export default function PackageDetailPage() {
   };
 
   const handlePrintPdf = () => {
+    if (!pkg) return;
+    const originalTitle = document.title;
+    const safeName = String(pkg.name || 'แพ็กเกจ').replace(/[\\/:*?"<>|]/g, '').trim();
+    document.title = `รายละเอียด_${safeName}`;
+    document.body.classList.add('printing-package');
+    const cleanup = () => {
+      document.title = originalTitle;
+      document.body.classList.remove('printing-package');
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
     window.print();
+    setTimeout(cleanup, 1000);
   };
 
   return (
@@ -409,6 +422,15 @@ export default function PackageDetailPage() {
           </button>
         </div>
       </div>
+
+      {/* เอกสารรายละเอียดแพ็กเกจฉบับเต็ม A4 (แสดงเฉพาะตอนกดดาวน์โหลด PDF / พิมพ์) */}
+      <PackageDetailPrintView
+        pkg={pkg}
+        ritualTypes={ritualTypes}
+        selectedRitualId={selectedRitualId}
+        selectedUpgradeCost={selectedUpgradeCost}
+        displayPrice={displayPrice}
+      />
     </div>
   );
 }

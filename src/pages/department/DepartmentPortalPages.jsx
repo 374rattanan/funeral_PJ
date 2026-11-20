@@ -132,7 +132,7 @@ export function DepartmentDashboardPage() {
           to="/department/assignments"
           className="px-4 py-2 rounded-xl bg-[#2E5A44] hover:bg-[#234635] text-white text-xs font-semibold shadow-sm"
         >
-          ไปที่งานที่ได้รับมอบหมาย ({deptTasks.length} งาน) →
+          ไปที่งานที่ได้รับมอบหมาย ({upcomingTasks.length} งาน) →
         </Link>
       </div>
 
@@ -369,7 +369,6 @@ export function DepartmentAssignmentsPage() {
     acceptDepartmentTask,
     toggleTaskChecklist,
     updateTaskPhotosAndNote,
-    reportTaskProgress,
     completeDepartmentTask,
     setPreviewImageModal
   } = useApp();
@@ -391,7 +390,7 @@ export function DepartmentAssignmentsPage() {
       if (normalizeDepartmentName(t.department) !== currentDept) return false;
       const parent = bookingMap.get(t.bookingId);
       if (parent && (parent.status === 'รออนุมัติ' || parent.status === 'ยกเลิก')) return false;
-      if (t.status === 'ยกเลิก') return false;
+      if (t.status === 'ยกเลิก' || t.status === 'เสร็จสิ้น') return false;
       const q = search.trim().toLowerCase();
       if (!q) return true;
       return (
@@ -474,9 +473,9 @@ export function DepartmentAssignmentsPage() {
       {/* Header + Search */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-stone-900">รายการงานทั้งหมด ({currentDept})</h1>
+          <h1 className="text-xl font-bold text-stone-900">งานที่ได้รับมอบหมาย ({currentDept})</h1>
           <p className="text-xs text-stone-500">
-            คลิกเลือกงานทางซ้าย เพื่อติ๊กเช็กลิสต์และอัปโหลดรูปหน้างานทางขวา
+            แสดงเฉพาะงานที่กำลังดำเนินงาน/รอดำเนินงาน (งานที่เสร็จสิ้นแล้วจะย้ายไปแสดงที่เมนู &ldquo;ประวัติการดำเนินงาน&rdquo;)
           </p>
         </div>
 
@@ -497,8 +496,16 @@ export function DepartmentAssignmentsPage() {
         {/* รายการการ์ดงานด้านซ้าย */}
         <div className="lg:col-span-6 space-y-4">
           {deptTasks.length === 0 ? (
-            <div className="bg-white rounded-3xl border border-stone-200 p-10 text-center text-stone-500">
-              ไม่มีงานที่ได้รับมอบหมายสำหรับ {currentDept}
+            <div className="bg-white rounded-3xl border border-stone-200 p-10 text-center space-y-3">
+              <p className="text-stone-500 text-sm">
+                ไม่มีงานที่กำลังดำเนินงานสำหรับ {currentDept} ในขณะนี้
+              </p>
+              <Link
+                to="/department/history"
+                className="inline-block px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold transition"
+              >
+                ดูงานที่เสร็จสิ้นแล้วในประวัติการดำเนินงาน →
+              </Link>
             </div>
           ) : (
             deptTasks.map(task => {
@@ -859,30 +866,17 @@ export function DepartmentAssignmentsPage() {
                 </div>
               )}
 
-              {/* ปุ่มด้านล่าง: รายงานความคืบหน้า & งานเสร็จสิ้น */}
-              <div className="grid grid-cols-2 gap-4 pt-2">
-                <button
-                  type="button"
-                  disabled={isTaskDone}
-                  onClick={() => {
-                    if (isTaskDone) return;
-                    reportTaskProgress(selectedTask.id);
-                    showToast('ส่งรายงานความคืบหน้าและแจ้งเตือนแอดมินเรียบร้อยแล้ว');
-                  }}
-                  className="py-2.5 px-4 rounded-xl border border-stone-400 bg-white hover:bg-stone-100 disabled:opacity-50 disabled:cursor-not-allowed text-stone-900 text-xs font-bold transition"
-                >
-                  รายงานความคืบหน้า
-                </button>
-
+              {/* ปุ่มยืนยันงานเสร็จสิ้น (เช็กลิสต์ หมายเหตุ และรูปภาพบันทึกอัตโนมัติ) */}
+              <div className="space-y-2 pt-2">
                 <button
                   type="button"
                   disabled={!canCompleteTask}
                   onClick={() => {
                     if (!canCompleteTask) return;
                     completeDepartmentTask(selectedTask.id);
-                    showToast(`ยืนยันการเสร็จสิ้นงาน "${selectedTask.title}" สำเร็จ!`);
+                    showToast(`ยืนยันการเสร็จสิ้นงาน "${selectedTask.title}" แล้ว (ย้ายไปที่ประวัติการดำเนินงาน)`);
                   }}
-                  className={`py-2.5 px-4 rounded-xl text-xs font-bold transition ${
+                  className={`w-full py-3 px-4 rounded-xl text-sm font-bold transition ${
                     isTaskDone
                       ? 'bg-stone-300 text-stone-600 cursor-not-allowed'
                       : canCompleteTask
@@ -890,13 +884,18 @@ export function DepartmentAssignmentsPage() {
                       : 'bg-stone-200 text-stone-400 cursor-not-allowed'
                   }`}
                 >
-                  {isTaskDone ? '✓ งานเสร็จสิ้นแล้ว' : 'งานเสร็จสิ้น'}
+                  {isTaskDone ? '✓ งานเสร็จสิ้นแล้ว' : 'ยืนยันงานเสร็จสิ้น'}
                 </button>
+                <p className="text-[11px] text-center text-stone-400">
+                  ระบบบันทึกเช็กลิสต์ หมายเหตุ และรูปภาพหน้างานให้อัตโนมัติทันที
+                </p>
               </div>
             </div>
           ) : (
-            <div className="bg-white rounded-3xl border border-stone-200 p-10 text-center text-stone-500">
-              กรุณาเลือกรายการงานจากด้านซ้าย
+            <div className="bg-white rounded-3xl border border-stone-200 p-10 text-center text-stone-500 text-sm">
+              {deptTasks.length === 0
+                ? 'ขณะนี้ไม่มีงานค้างดำเนินการ สามารถดูงานที่เสร็จแล้วได้ที่เมนู "ประวัติการดำเนินงาน"'
+                : 'กรุณาเลือกรายการงานจากด้านซ้าย'}
             </div>
           )}
         </div>
