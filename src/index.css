@@ -26,30 +26,67 @@
   background: #9B7B45;
 }
 
+<<<<<<< HEAD
 /* กำหนดโครงหน้าสำหรับโหลดใบเสนอราคา */
+=======
+/* กำหนดขนาดกระดาษ A4 สำหรับพิมพ์เอกสารและใบเสนอราคา */
+>>>>>>> 9ae9a7ed19e834d47718f4fd4d43cb16d1094faa
 @page {
   size: A4 portrait;
   margin: 12mm 15mm;
 }
 
+<<<<<<< HEAD
+=======
+/* Print / PDF Stylesheet: ซ่อน Navbar, Sidebar, Footer และปุ่มควบคุมตอนพิมพ์เอกสาร PDF */
+>>>>>>> 9ae9a7ed19e834d47718f4fd4d43cb16d1094faa
 @media print {
   html,
   body {
     margin: 0 !important;
     padding: 0 !important;
+<<<<<<< HEAD
     background: #ffffff !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
 
   #root {
+=======
+    background-color: #FFFFFF !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  header,
+  footer,
+  aside,
+  .no-print {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  /* ซ่อนหน้าเว็บหลักเฉพาะตอนที่มีใบเสนอราคา A4 (#quotation-print-area) เพื่อให้หน้าอื่นพิมพ์ได้ปกติ */
+  body:has(#quotation-print-area) #root,
+  body.printing-quotation #root {
+>>>>>>> 9ae9a7ed19e834d47718f4fd4d43cb16d1094faa
     display: none !important;
   }
 
   #quotation-print-area {
     display: block !important;
     width: 100% !important;
+<<<<<<< HEAD
     background: #ffffff !important;
     font-family: 'Prompt', sans-serif !important;
   }
 }
+=======
+    background: #FFFFFF !important;
+    font-family: 'Prompt', sans-serif !important;
+  }
+}
+>>>>>>> 9ae9a7ed19e834d47718f4fd4d43cb16d1094faa

@@ -1,5 +1,9 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
+<<<<<<< HEAD
+=======
+import { SITE_CONFIG } from '../config/siteConfig';
+>>>>>>> 9ae9a7ed19e834d47718f4fd4d43cb16d1094faa
 
 function thaiBahtText(amount) {
   const num = Number(amount) || 0;
@@ -43,13 +47,26 @@ export default function QuotationPrintView({ booking }) {
   const formatThaiDate = (dateStr) => {
     if (!dateStr) return '-';
     try {
+<<<<<<< HEAD
       return new Date(dateStr).toLocaleDateString('th-TH', {
+=======
+      const d =
+        typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)
+          ? new Date(...dateStr.split('-').map((v, i) => (i === 1 ? Number(v) - 1 : Number(v))))
+          : new Date(dateStr);
+      if (Number.isNaN(d.getTime())) return String(dateStr);
+      return d.toLocaleDateString('th-TH', {
+>>>>>>> 9ae9a7ed19e834d47718f4fd4d43cb16d1094faa
         day: 'numeric',
         month: 'long',
         year: 'numeric'
       });
     } catch {
+<<<<<<< HEAD
       return dateStr;
+=======
+      return String(dateStr);
+>>>>>>> 9ae9a7ed19e834d47718f4fd4d43cb16d1094faa
     }
   };
 
@@ -63,12 +80,26 @@ export default function QuotationPrintView({ booking }) {
   const addons = booking.addons || [];
   const addonsTotal = addons.reduce((sum, a) => sum + (Number(a.total) || 0), 0);
   const ritualUpgrade = Number(booking.ritualUpgradePrice) || 0;
+<<<<<<< HEAD
   const packageBasePrice =
     booking.packagePrice != null
       ? Number(booking.packagePrice)
       : Math.max(0, Number(booking.netTotal || 0) - addonsTotal - ritualUpgrade);
 
   const contactName = `${booking.contact?.prefix || ''}${booking.contact?.fullName || '-'}`.trim();
+=======
+  const extraGuests = Number(booking.extraGuests) || 0;
+  const extraGuestsCost = Number(booking.extraGuestsCost) || 0;
+  const extraGuestUnitPrice = extraGuests > 0 ? extraGuestsCost / extraGuests : 150;
+  const netTotal = Number(booking.netTotal) || 0;
+  const packageBasePrice =
+    booking.packagePrice != null
+      ? Number(booking.packagePrice)
+      : Math.max(0, netTotal - addonsTotal - ritualUpgrade - extraGuestsCost);
+
+  const contactName = `${booking.contact?.prefix || ''}${booking.contact?.fullName || '-'}`.trim();
+  const deceasedName = `${booking.deceased?.prefix || 'คุณ '}${booking.deceased?.fullName || '-'}`.trim();
+>>>>>>> 9ae9a7ed19e834d47718f4fd4d43cb16d1094faa
   const contactPhone = booking.contact?.phone || '-';
   const contactAddress =
     booking.contact?.address ||
@@ -81,7 +112,47 @@ export default function QuotationPrintView({ booking }) {
     ]
       .filter(Boolean)
       .join(' ') ||
+<<<<<<< HEAD
     'ต.หนองหาร อ.สันทราย จ.เชียงใหม่';
+=======
+    SITE_CONFIG.addressShort;
+
+  const mainPackageRows = [
+    {
+      key: 'main-package',
+      title: booking.packageName,
+      subtitle: `รองรับแขกประมาณ ${booking.totalGuests} คน | รูปแบบพิธีกรรม: ${booking.ritualName}`,
+      qty: 1,
+      unit: 'แพ็กเกจ',
+      unitPrice: packageBasePrice,
+      amount: packageBasePrice
+    },
+    ...(ritualUpgrade > 0
+      ? [
+          {
+            key: 'ritual-upgrade',
+            title: `ค่าบริการเพิ่มเติมรูปแบบพิธีกรรม (${booking.ritualName})`,
+            qty: 1,
+            unit: 'งาน',
+            unitPrice: ritualUpgrade,
+            amount: ritualUpgrade
+          }
+        ]
+      : []),
+    ...(extraGuests > 0 && extraGuestsCost > 0
+      ? [
+          {
+            key: 'extra-guests',
+            title: 'เพิ่มจำนวนแขกรองรับเกินแพ็กเกจ (อาหารว่าง/น้ำดื่ม/เก้าอี้)',
+            qty: extraGuests,
+            unit: 'คน',
+            unitPrice: extraGuestUnitPrice,
+            amount: extraGuestsCost
+          }
+        ]
+      : [])
+  ];
+>>>>>>> 9ae9a7ed19e834d47718f4fd4d43cb16d1094faa
 
   const content = (
     <div
@@ -125,7 +196,11 @@ export default function QuotationPrintView({ booking }) {
             </div>
             <div className="flex">
               <span className="text-stone-500 w-28 shrink-0">งานฌาปนกิจ</span>
+<<<<<<< HEAD
               <span className="font-semibold text-stone-900">คุณ {booking.deceased?.fullName || '-'}</span>
+=======
+              <span className="font-semibold text-stone-900">{deceasedName}</span>
+>>>>>>> 9ae9a7ed19e834d47718f4fd4d43cb16d1094faa
             </div>
           </div>
 
@@ -157,9 +232,18 @@ export default function QuotationPrintView({ booking }) {
             <div className="flex">
               <span className="text-stone-500 w-28 shrink-0">ผู้ออก / Issuer</span>
               <div>
+<<<<<<< HEAD
                 <p className="font-semibold text-stone-900">วิสาหกิจชุมชนบ้านวิเวก</p>
                 <p className="text-stone-600">หมู่ 8 ต.หนองหาร อ.สันทราย จ.เชียงใหม่ 50290</p>
                 <p className="text-stone-600">โทร. 012-345-6789</p>
+=======
+                <p className="font-semibold text-stone-900">{SITE_CONFIG.brandName}</p>
+                <p className="text-stone-600">{SITE_CONFIG.addressShort}</p>
+                <p className="text-stone-600">
+                  โทร. {SITE_CONFIG.contactPhone}
+                  {SITE_CONFIG.contactMobile ? ` / ${SITE_CONFIG.contactMobile}` : ''}
+                </p>
+>>>>>>> 9ae9a7ed19e834d47718f4fd4d43cb16d1094faa
               </div>
             </div>
           </div>
@@ -219,6 +303,7 @@ export default function QuotationPrintView({ booking }) {
               </tr>
             </thead>
             <tbody>
+<<<<<<< HEAD
               <tr className="align-top border-b border-stone-300 break-inside-avoid">
                 <td className="py-2 px-2 text-center border-r border-stone-300">1</td>
                 <td className="py-2 px-3 border-r border-stone-300">
@@ -253,6 +338,27 @@ export default function QuotationPrintView({ booking }) {
                   </td>
                 </tr>
               )}
+=======
+              {mainPackageRows.map((row, idx) => (
+                <tr key={row.key} className="align-top border-b border-stone-300 break-inside-avoid">
+                  <td className="py-1.5 px-2 text-center border-r border-stone-300">{idx + 1}</td>
+                  <td className="py-1.5 px-3 border-r border-stone-300">
+                    <p className={row.subtitle ? 'font-semibold text-stone-900' : ''}>{row.title}</p>
+                    {row.subtitle && (
+                      <p className="text-[10px] text-stone-600 mt-0.5">{row.subtitle}</p>
+                    )}
+                  </td>
+                  <td className="py-1.5 px-2 text-center border-r border-stone-300">{row.qty}</td>
+                  <td className="py-1.5 px-2 text-center border-r border-stone-300">{row.unit}</td>
+                  <td className="py-1.5 px-2.5 text-right border-r border-stone-300">
+                    {row.unitPrice.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                  </td>
+                  <td className="py-1.5 px-2.5 text-right font-medium text-stone-900">
+                    {row.amount.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                  </td>
+                </tr>
+              ))}
+>>>>>>> 9ae9a7ed19e834d47718f4fd4d43cb16d1094faa
             </tbody>
           </table>
         </div>
@@ -300,10 +406,17 @@ export default function QuotationPrintView({ booking }) {
                     </td>
                     <td className="py-1.5 px-2 text-center border-r border-stone-300">{addon.unit || 'ชุด'}</td>
                     <td className="py-1.5 px-2.5 text-right border-r border-stone-300">
+<<<<<<< HEAD
                       {Number(addon.price).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
                     </td>
                     <td className="py-1.5 px-2.5 text-right font-medium text-stone-900">
                       {Number(addon.total).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+=======
+                      {(Number(addon.price) || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+                    </td>
+                    <td className="py-1.5 px-2.5 text-right font-medium text-stone-900">
+                      {(Number(addon.total) || 0).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+>>>>>>> 9ae9a7ed19e834d47718f4fd4d43cb16d1094faa
                     </td>
                   </tr>
                 ))}
@@ -323,17 +436,29 @@ export default function QuotationPrintView({ booking }) {
               {booking.paymentOption === 'FULL' ? (
                 <p>
                   • รูปแบบชำระเต็มจำนวน (100%): ยอดชำระ{' '}
+<<<<<<< HEAD
                   <strong className="text-stone-900">{Number(booking.netTotal).toLocaleString()} บาท</strong> ณ ศูนย์บริการวิสาหกิจชุมชนบ้านวิเวก
+=======
+                  <strong className="text-stone-900">{netTotal.toLocaleString()} บาท</strong> ณ ศูนย์บริการ{SITE_CONFIG.brandName}
+>>>>>>> 9ae9a7ed19e834d47718f4fd4d43cb16d1094faa
                 </p>
               ) : (
                 <>
                   <p>
                     • งวดที่ 1 (มัดจำ {booking.installment1Percent || 25}%): ชำระ{' '}
+<<<<<<< HEAD
                     <strong className="text-stone-900">{Number(booking.installment1Amount).toLocaleString()} บาท</strong> วันนัดหมายติดต่อศูนย์บริการ
                   </p>
                   <p>
                     • งวดที่ 2 (ส่วนที่เหลือ): ชำระ{' '}
                     <strong className="text-stone-900">{Number(booking.installment2Amount).toLocaleString()} บาท</strong> วันเสร็จสิ้นงาน ณ ศูนย์บริการ
+=======
+                    <strong className="text-stone-900">{Number(booking.installment1Amount || 0).toLocaleString()} บาท</strong> วันนัดหมายติดต่อศูนย์บริการ
+                  </p>
+                  <p>
+                    • งวดที่ 2 (ส่วนที่เหลือ): ชำระ{' '}
+                    <strong className="text-stone-900">{Number(booking.installment2Amount || 0).toLocaleString()} บาท</strong> วันเสร็จสิ้นงาน ณ ศูนย์บริการ
+>>>>>>> 9ae9a7ed19e834d47718f4fd4d43cb16d1094faa
                   </p>
                 </>
               )}
@@ -344,7 +469,11 @@ export default function QuotationPrintView({ booking }) {
                 </p>
               )}
               <p className="text-[10px] text-stone-500 pt-0.5">
+<<<<<<< HEAD
                 * ชำระเงินกับเจ้าหน้าที่ ณ ศูนย์บริการวิสาหกิจชุมชนบ้านวิเวกเท่านั้น เพื่อออกใบเสร็จรับเงินอย่างเป็นทางการ
+=======
+                * ชำระเงินกับเจ้าหน้าที่ ณ ศูนย์บริการ{SITE_CONFIG.brandName}เท่านั้น เพื่อออกใบเสร็จรับเงินอย่างเป็นทางการ
+>>>>>>> 9ae9a7ed19e834d47718f4fd4d43cb16d1094faa
               </p>
             </div>
 
@@ -352,7 +481,11 @@ export default function QuotationPrintView({ booking }) {
               <div className="flex justify-between py-1 border-b border-stone-200">
                 <span className="text-stone-600">รวมเป็นเงินทั้งสิ้น (บาท) / Subtotal</span>
                 <span className="font-medium text-stone-900">
+<<<<<<< HEAD
                   {Number(booking.netTotal).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+=======
+                  {netTotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+>>>>>>> 9ae9a7ed19e834d47718f4fd4d43cb16d1094faa
                 </span>
               </div>
               <div className="flex justify-between py-1 border-b border-stone-300">
@@ -362,12 +495,20 @@ export default function QuotationPrintView({ booking }) {
               <div className="flex justify-between py-1.5 border-b border-stone-400 items-center">
                 <span className="font-bold text-stone-900">จำนวนเงินรวมทั้งสิ้น (บาท) / Grand Total</span>
                 <span className="font-bold text-sm text-stone-900">
+<<<<<<< HEAD
                   {Number(booking.netTotal).toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+=======
+                  {netTotal.toLocaleString('th-TH', { minimumFractionDigits: 2 })}
+>>>>>>> 9ae9a7ed19e834d47718f4fd4d43cb16d1094faa
                 </span>
               </div>
               <div className="flex justify-between py-1 border-b border-stone-300 text-[10px]">
                 <span className="text-stone-500">Total Amount</span>
+<<<<<<< HEAD
                 <span className="font-semibold text-stone-800">({thaiBahtText(booking.netTotal)})</span>
+=======
+                <span className="font-semibold text-stone-800">({thaiBahtText(netTotal)})</span>
+>>>>>>> 9ae9a7ed19e834d47718f4fd4d43cb16d1094faa
               </div>
             </div>
           </div>
@@ -384,10 +525,17 @@ export default function QuotationPrintView({ booking }) {
             </div>
 
             <div className="px-4 flex flex-col justify-between">
+<<<<<<< HEAD
               <p className="font-bold text-stone-900 mb-10">ผู้เสนอราคา / เจ้าหน้าที่วิสาหกิจชุมชนบ้านวิเวก</p>
               <div className="space-y-1">
                 <p className="text-stone-600">ลงชื่อ ........................................................................</p>
                 <p className="font-medium text-stone-900">(เจ้าหน้าที่ศูนย์บริการวิสาหกิจชุมชนบ้านวิเวก)</p>
+=======
+              <p className="font-bold text-stone-900 mb-10">ผู้เสนอราคา / เจ้าหน้าที่{SITE_CONFIG.brandName}</p>
+              <div className="space-y-1">
+                <p className="text-stone-600">ลงชื่อ ........................................................................</p>
+                <p className="font-medium text-stone-900">(เจ้าหน้าที่ศูนย์บริการ{SITE_CONFIG.brandName})</p>
+>>>>>>> 9ae9a7ed19e834d47718f4fd4d43cb16d1094faa
                 <p className="text-[10px] text-stone-500">วันที่ {formatThaiDate(issueDate)}</p>
               </div>
             </div>
@@ -398,4 +546,8 @@ export default function QuotationPrintView({ booking }) {
   );
 
   return createPortal(content, document.body);
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 9ae9a7ed19e834d47718f4fd4d43cb16d1094faa

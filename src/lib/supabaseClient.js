@@ -1,10 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 
-const rawUrl = import.meta.env.VITE_SUPABASE_URL?.trim() || '';
-const supabaseUrl = rawUrl.replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '');
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim();
+const DEFAULT_SUPABASE_URL = 'https://rxfoievnsfkodxtcxjsk.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_TUGbC8_VfUm0Caz_m7NKUw_NAFw8ZAB';
 
-// หากตั้งค่า VITE_SUPABASE_URL และ VITE_SUPABASE_ANON_KEY ในไฟล์ .env แล้วจะสร้าง Client เชื่อมต่อทันที
+const env = import.meta?.env || {};
+const rawUrl = (env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL).trim();
+const supabaseUrl = rawUrl.replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '');
+const supabaseAnonKey = (env.VITE_SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY).trim();
+
+// เชื่อมต่อ Supabase Client ทันที
 export const isSupabaseConfigured = Boolean(
   supabaseUrl &&
   supabaseAnonKey &&

@@ -42,21 +42,31 @@ export default function AdminStaffPage() {
   const handleSaveStaff = (e) => {
     e.preventDefault();
     if (!modalStaff.fullName.trim()) return;
-    saveStaffMember(modalStaff);
+    if (!modalStaff.phone.trim()) {
+      window.alert('กรุณากรอกเบอร์โทรศัพท์ของผู้รับผิดชอบ');
+      return;
+    }
+    saveStaffMember({
+      ...modalStaff,
+      fullName: modalStaff.fullName.trim(),
+      phone: modalStaff.phone.trim()
+    });
     setModalStaff(null);
   };
+
+  const q = search.trim().toLowerCase();
 
   return (
     <div className="max-w-5xl space-y-6">
       <h1 className="text-2xl font-bold text-stone-900">ผู้รับผิดชอบ</h1>
 
-      {/* กล่องจัดการแผนก (แท็ก) ตามรูปที่ 5 ของ Admin */}
+      {/* กล่องจัดการแผนก (แท็ก) */}
       <div className="bg-white rounded-3xl p-6 border border-stone-200 shadow-sm space-y-4">
         <h2 className="font-bold text-base text-stone-900">แผนก</h2>
         <form onSubmit={handleAddDept} className="flex items-center gap-2 border border-stone-200 rounded-xl p-1.5">
           <input
             type="text"
-            placeholder="กรอกชื่อแผนก เช่น ฝ่ายสถานที่, ฝ่ายหัตถกรรม"
+            placeholder="กรอกชื่อแผนก เช่น ฝ่ายสถานที่, ฝ่ายหัตถกรรมและของชำร่วย"
             value={newDeptName}
             onChange={e => setNewDeptName(e.target.value)}
             className="flex-1 px-3 py-2 text-sm focus:outline-none"
@@ -78,8 +88,13 @@ export default function AdminStaffPage() {
               <span>{dept}</span>
               <button
                 type="button"
-                onClick={() => removeDepartmentTag(dept)}
+                onClick={() => {
+                  if (window.confirm(`ต้องการลบแผนก "${dept}" ใช่หรือไม่?`)) {
+                    removeDepartmentTag(dept);
+                  }
+                }}
                 className="hover:text-red-600"
+                title={`ลบแผนก ${dept}`}
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -95,7 +110,7 @@ export default function AdminStaffPage() {
           <div className="relative w-64">
             <input
               type="text"
-              placeholder="search"
+              placeholder="ค้นหาชื่อเจ้าหน้าที่ / แผนก / เบอร์โทร"
               value={search}
               onChange={e => setSearch(e.target.value)}
               className="w-full pl-4 pr-9 py-2 rounded-full border border-stone-300 bg-white text-xs"
@@ -115,18 +130,22 @@ export default function AdminStaffPage() {
         {staff
           .filter(
             s =>
-              s.fullName.toLowerCase().includes(search.toLowerCase()) ||
-              s.department.toLowerCase().includes(search.toLowerCase())
+              !q ||
+              s.fullName.toLowerCase().includes(q) ||
+              (s.department || '').toLowerCase().includes(q) ||
+              (s.phone || '').toLowerCase().includes(q)
           )
           .map(person => (
             <div
               key={person.id}
-              className="bg-white rounded-2xl p-5 border border-stone-200 shadow-sm flex items-center justify-between"
+              className="bg-white rounded-2xl p-5 border border-stone-200 shadow-sm flex flex-wrap items-center justify-between gap-4"
             >
-              <div className="flex items-center gap-4 w-56">
+              <div className="flex items-center gap-4 min-w-[220px]">
                 <UserCircle2 className="w-10 h-10 text-stone-700 shrink-0" />
                 <div>
-                  <p className="font-bold text-sm text-stone-900">{person.fullName}</p>
+                  <p className="font-bold text-sm text-stone-900">
+                    {person.prefix ? `${person.prefix}` : ''}{person.fullName}
+                  </p>
                   <p className="text-xs text-stone-500">{person.phone}</p>
                 </div>
               </div>
@@ -139,12 +158,18 @@ export default function AdminStaffPage() {
                 <button
                   onClick={() => setModalStaff(person)}
                   className="p-2 rounded-lg text-blue-900 hover:bg-stone-100"
+                  title="แก้ไขผู้รับผิดชอบ"
                 >
                   <Pencil className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => deleteStaffMember(person.id)}
+                  onClick={() => {
+                    if (window.confirm(`ต้องการลบผู้รับผิดชอบ "${person.fullName}" ใช่หรือไม่?`)) {
+                      deleteStaffMember(person.id);
+                    }
+                  }}
                   className="p-2 rounded-lg text-blue-900 hover:bg-red-50 hover:text-red-600"
+                  title="ลบผู้รับผิดชอบ"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -153,10 +178,10 @@ export default function AdminStaffPage() {
           ))}
       </div>
 
-      {/* Modal เพิ่ม/แก้ไขผู้รับผิดชอบ ตามรูปที่ 3 ของ Admin */}
+      {/* Modal เพิ่ม/แก้ไขผู้รับผิดชอบ */}
       {modalStaff && (
         <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl relative">
+          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl relative max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-bold text-stone-900">
                 {modalStaff.id ? 'แก้ไขผู้รับผิดชอบ' : 'เพิ่มผู้รับผิดชอบ'}
@@ -183,6 +208,9 @@ export default function AdminStaffPage() {
                     <option value="นาย">นาย</option>
                     <option value="นาง">นาง</option>
                     <option value="นางสาว">นางสาว</option>
+                    <option value="พ่อหลวง">พ่อหลวง</option>
+                    <option value="พ่อหนาน">พ่อหนาน</option>
+                    <option value="แม่หลวง">แม่หลวง</option>
                   </select>
                 </div>
                 <div className="sm:col-span-8">
@@ -216,7 +244,7 @@ export default function AdminStaffPage() {
                 </div>
                 <div className="sm:col-span-7">
                   <label className="block text-xs font-medium text-stone-700 mb-1">
-                    ที่อยู่ผู้รับผิดชอบ <span className="text-red-500">*</span>
+                    ที่อยู่ผู้รับผิดชอบ
                   </label>
                   <input
                     type="text"
@@ -230,46 +258,56 @@ export default function AdminStaffPage() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-stone-700 mb-1">
-                    จังหวัด <span className="text-red-500">*</span>
+                    จังหวัด
                   </label>
-                  <select
+                  <input
+                    type="text"
+                    list="staff-provinces"
                     value={modalStaff.province}
                     onChange={e => setModalStaff({ ...modalStaff, province: e.target.value })}
                     className="w-full px-2.5 py-2 rounded-xl border border-stone-200 text-xs"
-                  >
-                    <option value="เชียงใหม่">เชียงใหม่</option>
-                    <option value="ลำพูน">ลำพูน</option>
-                  </select>
+                  />
+                  <datalist id="staff-provinces">
+                    <option value="เชียงใหม่" />
+                    <option value="ลำพูน" />
+                  </datalist>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-stone-700 mb-1">
-                    ตำบล / แขวง <span className="text-red-500">*</span>
+                    ตำบล / แขวง
                   </label>
-                  <select
+                  <input
+                    type="text"
+                    list="staff-subdistricts"
                     value={modalStaff.subdistrict}
                     onChange={e => setModalStaff({ ...modalStaff, subdistrict: e.target.value })}
                     className="w-full px-2.5 py-2 rounded-xl border border-stone-200 text-xs"
-                  >
-                    <option value="หนองหาร">หนองหาร</option>
-                    <option value="แม่แฝก">แม่แฝก</option>
-                  </select>
+                  />
+                  <datalist id="staff-subdistricts">
+                    <option value="หนองหาร" />
+                    <option value="แม่แฝก" />
+                    <option value="สันทรายหลวง" />
+                  </datalist>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-stone-700 mb-1">
-                    อำเภอ / เขต <span className="text-red-500">*</span>
+                    อำเภอ / เขต
                   </label>
-                  <select
+                  <input
+                    type="text"
+                    list="staff-districts"
                     value={modalStaff.district}
                     onChange={e => setModalStaff({ ...modalStaff, district: e.target.value })}
                     className="w-full px-2.5 py-2 rounded-xl border border-stone-200 text-xs"
-                  >
-                    <option value="สันทราย">สันทราย</option>
-                    <option value="เมืองเชียงใหม่">เมืองเชียงใหม่</option>
-                  </select>
+                  />
+                  <datalist id="staff-districts">
+                    <option value="สันทราย" />
+                    <option value="เมืองเชียงใหม่" />
+                  </datalist>
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-stone-700 mb-1">
-                    รหัสไปรษณีย์ <span className="text-red-500">*</span>
+                    รหัสไปรษณีย์
                   </label>
                   <input
                     type="text"
@@ -288,6 +326,7 @@ export default function AdminStaffPage() {
                   <input
                     type="text"
                     required
+                    placeholder="เช่น 081-234-5678"
                     value={modalStaff.phone}
                     onChange={e => setModalStaff({ ...modalStaff, phone: e.target.value })}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-stone-200"
@@ -295,7 +334,7 @@ export default function AdminStaffPage() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-stone-700 mb-1">
-                    อีเมล <span className="text-red-500">*</span>
+                    อีเมล (ไม่บังคับ)
                   </label>
                   <input
                     type="email"

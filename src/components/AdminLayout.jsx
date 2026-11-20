@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink, Outlet, useNavigate, Link } from 'react-router-dom';
+import { NavLink, Outlet, useNavigate, useLocation, Link, Navigate } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
@@ -14,28 +14,53 @@ import {
   CreditCard,
   BarChart3,
   Globe,
-  Wrench,
-  RotateCcw
+  Wrench
 } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
+import { IS_DEMO_MODE, SITE_CONFIG } from '../config/siteConfig';
+
+const ROUTE_TITLES = [
+  { prefix: '/admin/requests', label: 'รายละเอียดคำขอและอนุมัติงาน' },
+  { prefix: '/admin/customers', label: 'ข้อมูลและรายละเอียดลูกค้า' },
+  { prefix: '/admin/packages', label: 'จัดการแพ็กเกจและบริการเสริม' },
+  { prefix: '/admin/locations', label: 'จัดการสถานที่และศาลา' },
+  { prefix: '/admin/staff', label: 'จัดการแผนกและบุคลากร' },
+  { prefix: '/admin/assignments', label: 'มอบหมายงานให้ฝ่ายปฏิบัติงาน' },
+  { prefix: '/admin/schedule', label: 'ปฏิทินตารางงาน' },
+  { prefix: '/admin/payments', label: 'รายการชำระเงิน' },
+  { prefix: '/admin/history', label: 'ประวัติการดำเนินงาน' },
+  { prefix: '/admin/reports', label: 'รายงานสรุปรายได้' }
+];
 
 export default function AdminLayout() {
   const {
     notifications,
+    markNotificationRead,
     markAllNotificationsRead,
     bookings,
-    resetDemoData,
-    supabaseConnected,
-    isLoadingDb,
-    refreshFromSupabase
+    staff
   } = useApp();
-  const { logout, loginAsDepartment } = useAuth();
+  const { user, logout, loginAsDepartment } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [showNotif, setShowNotif] = useState(false);
+
+  if (!user) {
+    return <Navigate to="/?login=admin" replace />;
+  }
+
+  // บังคับตรวจ Role ห้ามเจ้าหน้าที่แผนกเข้าหน้า Admin
+  if (user.role !== 'admin') {
+    return <Navigate to="/department" replace />;
+  }
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
   const pendingRequestsCount = bookings.filter(b => b.status === 'รออนุมัติ').length;
+
+  const currentPageLabel =
+    ROUTE_TITLES.find(r => location.pathname.startsWith(r.prefix))?.label ||
+    'ภาพรวมระบบบริหารจัดการงานฌาปนกิจ';
 
   const handleLogoutToPublic = () => {
     logout();
@@ -43,15 +68,9 @@ export default function AdminLayout() {
   };
 
   const handleSwitchToDepartment = () => {
-    loginAsDepartment('ฝ่ายสถานที่', 'ป้าฝ้าย ใจดี');
+    const venueStaff = (staff || []).find(s => s.department === 'ฝ่ายสถานที่');
+    loginAsDepartment('ฝ่ายสถานที่', venueStaff?.fullName || 'เจ้าหน้าที่ฝ่ายสถานที่');
     navigate('/department');
-  };
-
-  const handleReset = () => {
-    if (window.confirm('ต้องการรีเซ็ตข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้น (Demo Data) ใช่หรือไม่?')) {
-      resetDemoData();
-      window.location.reload();
-    }
   };
 
   const menuItems = [
@@ -69,15 +88,17 @@ export default function AdminLayout() {
 
   return (
     <div className="min-h-screen flex bg-[#F8F6F2] text-stone-800">
-      {/* Sidebar สีเทาเข้มตามรูปดีไซน์ Admin */}
-      <aside className="w-64 bg-[#4A4946] text-stone-100 flex flex-col shrink-0">
+      {/* Sidebar */}
+      <aside className="no-print w-64 bg-[#4A4946] text-stone-100 flex flex-col shrink-0">
         <div className="p-5 flex items-center gap-3 border-b border-stone-600">
-          <div className="w-11 h-11 rounded-full bg-[#9E9B95] text-stone-900 font-bold flex items-center justify-center text-xs">
-            Logo
+          <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#C8A46B] to-[#9B7B45] text-white font-bold flex items-center justify-center text-sm shadow-inner shrink-0">
+            บว
           </div>
-          <div>
-            <p className="font-semibold text-sm text-white">วิสาหกิจชุมชนบ้านวิเวก</p>
-            <p className="text-[11px] text-stone-300">ระบบจัดการฝั่งแอดมิน</p>
+          <div className="min-w-0">
+            <p className="font-semibold text-sm text-white truncate">{SITE_CONFIG.brandName}</p>
+            <p className="text-[11px] text-stone-300">
+              ระบบจัดการฝั่งแอดมิน{IS_DEMO_MODE ? ' (โหมดสาธิต)' : ''}
+            </p>
           </div>
         </div>
 
@@ -111,7 +132,7 @@ export default function AdminLayout() {
           })}
         </nav>
 
-        {/* ปุ่มสลับหน้าด่วนและออกจากระบบด้านล่าง */}
+        {/* ปุ่มสลับหน้าและออกจากระบบ */}
         <div className="p-4 border-t border-stone-600 space-y-2">
           <div className="flex gap-1.5">
             <Link
@@ -121,22 +142,25 @@ export default function AdminLayout() {
               <Globe className="w-3.5 h-3.5" />
               หน้าลูกค้า
             </Link>
-            <button
-              onClick={handleSwitchToDepartment}
-              className="flex-1 py-1.5 px-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-[11px] text-center text-white flex items-center justify-center gap-1"
-            >
-              <Wrench className="w-3.5 h-3.5" />
-              ฝั่งแผนก
-            </button>
+            {IS_DEMO_MODE && (
+              <button
+                onClick={handleSwitchToDepartment}
+                className="flex-1 py-1.5 px-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-[11px] text-center text-white flex items-center justify-center gap-1"
+                title="สลับไปทดสอบมุมมองฝ่ายปฏิบัติงาน (เฉพาะโหมดสาธิต)"
+              >
+                <Wrench className="w-3.5 h-3.5" />
+                ฝั่งแผนก
+              </button>
+            )}
           </div>
           <div className="flex items-center justify-between pt-2">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-full bg-white text-stone-800 flex items-center justify-center font-bold text-sm">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-full bg-white text-stone-800 flex items-center justify-center font-bold text-sm shrink-0">
                 A
               </div>
-              <div>
-                <p className="text-sm font-medium text-white">Admin</p>
-                <p className="text-[11px] text-stone-300">ศูนย์บริการบ้านวิเวก</p>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-white truncate">{user.displayName || 'Admin'}</p>
+                <p className="text-[11px] text-stone-300 truncate">{SITE_CONFIG.brandShortName}</p>
               </div>
             </div>
             <button
@@ -152,39 +176,22 @@ export default function AdminLayout() {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
-        {/* Top Header สีครีมอ่อนตามรูปดีไซน์ */}
-        <header className="h-16 bg-[#FDF3E3] border-b border-[#EBDCC4] px-6 flex items-center justify-between">
+        <header className="no-print h-16 bg-[#FDF3E3] border-b border-[#EBDCC4] px-6 flex items-center justify-between">
           <div className="flex items-center gap-2 text-sm text-stone-600">
-            <span className="font-medium text-stone-800">Dashboard</span>
+            <Link to="/admin" className="font-medium text-stone-800 hover:underline">
+              Dashboard
+            </Link>
             <span>&gt;</span>
-            <span className="text-stone-700">ระบบบริหารจัดการงานฌาปนกิจ</span>
+            <span className="text-stone-700 font-medium">{currentPageLabel}</span>
           </div>
 
           <div className="flex items-center gap-3">
-            {/* แสดงสถานะการเชื่อมต่อฐานข้อมูล Supabase */}
-            <button
-              onClick={refreshFromSupabase}
-              disabled={isLoadingDb}
-              title="คลิกเพื่อซิงก์ข้อมูลล่าสุดจากฐานข้อมูล"
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold flex items-center gap-1.5 border transition ${
-                supabaseConnected
-                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
-                  : 'bg-stone-100 text-stone-700 border-stone-300'
-              }`}
-            >
-              <span className={`w-2 h-2 rounded-full ${supabaseConnected ? 'bg-emerald-500 animate-pulse' : 'bg-stone-400'}`} />
-              {isLoadingDb
-                ? 'กำลังซิงก์ข้อมูล...'
-                : supabaseConnected
-                  ? 'ฐานข้อมูลออนไลน์'
-                  : 'ซิงก์ข้อมูลล่าสุด'}
-            </button>
-
             {/* กระดิ่งแจ้งเตือน */}
             <div className="relative">
               <button
                 onClick={() => setShowNotif(!showNotif)}
                 className="relative p-2 rounded-full hover:bg-amber-100/80 text-stone-800 transition"
+                title="การแจ้งเตือน"
               >
                 <Bell className="w-6 h-6" />
                 {unreadCount > 0 && (
@@ -213,14 +220,15 @@ export default function AdminLayout() {
                         <div
                           key={n.id}
                           onClick={() => {
+                            markNotificationRead(n.id);
                             setShowNotif(false);
                             if (n.bookingId) navigate(`/admin/requests/${n.bookingId}`);
                           }}
                           className={`p-3.5 cursor-pointer hover:bg-stone-50 transition ${!n.isRead ? 'bg-amber-50/60' : ''}`}
                         >
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-between gap-2">
                             <p className="font-semibold text-xs text-stone-800">{n.title}</p>
-                            <span className="text-[10px] text-stone-400">{n.createdAt}</span>
+                            <span className="text-[10px] text-stone-400 shrink-0">{n.createdAt}</span>
                           </div>
                           <p className="text-xs text-stone-600 mt-1">{n.message}</p>
                         </div>

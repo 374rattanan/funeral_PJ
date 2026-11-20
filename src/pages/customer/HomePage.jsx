@@ -5,7 +5,7 @@ import { useApp } from '../../context/AppContext';
 import { PORTFOLIO_ITEMS } from '../../data/initialData';
 
 export default function HomePage() {
-  const { packages, locations, departments, staff, bookings, supabaseConnected } = useApp();
+  const { packages, locations, departments, staff, bookings } = useApp();
   const [pkgStartIndex, setPkgStartIndex] = useState(0);
 
   // แสดงครั้งละ 3 แพ็กเกจ แบบวนรอบต่อเนื่อง (Circular Wrap-around: 1-2-3 -> 2-3-4 -> 3-4-1 -> 4-1-2)
@@ -43,15 +43,15 @@ export default function HomePage() {
   return (
     <div className="space-y-16 pb-8">
       {/* Hero Section ตามรูปดีไซน์ */}
-      <section className="relative bg-stone-900 overflow-hidden">
+      <section className="relative bg-stone-900 overflow-hidden min-h-[340px] sm:min-h-[420px] flex items-center">
         <img
-          src="https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=1600&q=80"
-          alt="ดอกลั่นทม วิสาหกิจชุมชนบ้านวิเวก"
-          className="absolute inset-0 w-full h-full object-cover opacity-55"
+          src="/images/header-banner.png"
+          alt="แบนเนอร์ วิสาหกิจชุมชนบ้านวิเวก"
+          className="absolute inset-0 w-full h-full object-cover object-center opacity-55"
         />
         <div className="absolute inset-0 bg-gradient-to-r from-stone-900/75 via-stone-900/40 to-transparent" />
 
-        <div className="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
+        <div className="relative w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-14 sm:py-16">
           <h1 className="text-2xl sm:text-4xl font-bold text-white drop-shadow leading-snug">
             ยินดีต้อนรับ วิสาหกิจชุมชนบ้านวิเวก
           </h1>
@@ -108,8 +108,8 @@ export default function HomePage() {
         </div>
 
         <div className="relative flex items-center gap-3 sm:gap-4">
-          {/* ปุ่มเลื่อนซ้าย (วนรอบได้ตลอด) */}
-          {totalPackages > 1 && (
+          {/* ปุ่มเลื่อนซ้าย (แสดงเมื่อมีมากกว่า 3 แพ็กเกจ) */}
+          {totalPackages > 3 && (
             <button
               type="button"
               onClick={handlePrevPackages}
@@ -140,7 +140,7 @@ export default function HomePage() {
                     <h3 className="font-bold text-lg text-stone-800">{pkg.name}</h3>
                     <p className="text-xs text-stone-500 mt-0.5">{pkg.durationText} | แขก {pkg.baseGuests} คน</p>
                     <p className="mt-3 text-2xl font-bold text-[#9B7B45]">
-                      {pkg.price.toLocaleString()} <span className="text-xs font-normal text-stone-500">บาท</span>
+                      {Number(pkg.price || 0).toLocaleString()} <span className="text-xs font-normal text-stone-500">บาท</span>
                     </p>
                   </div>
 
@@ -172,8 +172,8 @@ export default function HomePage() {
             ))}
           </div>
 
-          {/* ปุ่มเลื่อนขวา (วนรอบได้ตลอด) */}
-          {totalPackages > 1 && (
+          {/* ปุ่มเลื่อนขวา (แสดงเมื่อมีมากกว่า 3 แพ็กเกจ) */}
+          {totalPackages > 3 && (
             <button
               type="button"
               onClick={handleNextPackages}
@@ -187,7 +187,7 @@ export default function HomePage() {
 
         {/* ตัวบอกตำแหน่งการเลื่อน (Dots) และลิงก์ดูแพ็กเกจทั้งหมด */}
         <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-3 px-2">
-          {totalPackages > 1 ? (
+          {totalPackages > 3 ? (
             <div className="flex items-center gap-2 mx-auto sm:mx-0">
               {packages.map((pkg, idx) => (
                 <button
@@ -200,9 +200,9 @@ export default function HomePage() {
                   }`}
                 />
               ))}
-              <span className="text-xs text-stone-500 ml-2">
+              {/* <span className="text-xs text-stone-500 ml-2">
                 เลื่อนดูได้ต่อเนื่อง ({totalPackages} แพ็กเกจ)
-              </span>
+              </span> */}
             </div>
           ) : <div />}
 
@@ -252,40 +252,74 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* พิธีกรรมทางศาสนา (ปราสาทล้านนา + คำอธิบาย 3 แบบ ตามรูปหน้าแรก) */}
+      {/* พิธีกรรมทางศาสนา: ปราสาทศพ ความเชื่อที่ซ่อนอยู่เบื้องหลังพิธีงานศพล้านนา */}
       <section id="about-section" className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <h2 className="text-xl sm:text-2xl font-bold text-stone-800 text-center mb-8">พิธีกรรมทางศาสนา</h2>
-        <div className="bg-white rounded-2xl p-6 sm:p-8 border border-[#E6DAC3] shadow-sm grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
-          <div className="md:col-span-5">
-            <div className="rounded-xl overflow-hidden border border-stone-200 shadow">
+        <div className="bg-white rounded-2xl p-6 sm:p-8 border border-[#E6DAC3] shadow-sm grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+          <div className="md:col-span-5 md:sticky md:top-28">
+            <div className="rounded-xl overflow-hidden border border-stone-200 shadow bg-stone-50">
               <img
-                src="https://images.unsplash.com/photo-1563492065599-3520f775eeed?auto=format&fit=crop&w=800&q=80"
+                src="/images/lanna-prasat.jpg"
                 alt="ปราสาทศพแบบล้านนา"
-                className="w-full h-72 object-cover"
+                className="w-full h-auto max-h-[460px] object-cover"
               />
             </div>
-            <p className="text-[11px] text-stone-500 mt-2 text-center">
-              ปราสาทศพและพิธีกรรมตามจารีตประเพณีล้านนา โดยกลุ่มรับเหมาจัดงานบ้านวิเวก
+            <p className="text-[11px] text-stone-500 mt-2.5 text-center leading-relaxed">
+              แหล่งที่มา : โครงการสำรวจข้อมูลปราชญ์ท้องถิ่นล้านนา โดย นายวุฒิภัทร เกตุพัฒนพล ศูนย์ศิลปวัฒนธรรม มหาวิทยาลัยแม่โจ้
             </p>
           </div>
 
           <div className="md:col-span-7 space-y-4 text-xs sm:text-sm text-stone-700 leading-relaxed">
-            <p className="font-semibold text-stone-900 text-base">
-              พิธีกรรมงานศพล้านนา (เลือกปรับได้ตามความเหมาะสมของครอบครัว)
-            </p>
-            <p>
-              วิสาหกิจชุมชนบ้านวิเวกสืบสานพิธีกรรมบำเพ็ญกุศลและฌาปนกิจตามขนบธรรมเนียมล้านนาอย่างถูกต้องครบถ้วน โดยมีครูบาอาจารย์และมัคนายกผู้เชี่ยวชาญคอยดูแลทุกขั้นตอน แบ่งเป็น 3 รูปแบบหลัก:
-            </p>
-            <div className="space-y-2.5 bg-[#FAF6EE] p-4 rounded-xl border border-[#E6DAC3]">
+            <h3 className="font-bold text-stone-900 text-base sm:text-lg border-b border-[#E6DAC3] pb-2.5">
+              ปราสาทศพ ความเชื่อที่ซ่อนอยู่เบื้องหลังพิธีงานศพล้านนา
+            </h3>
+
+            <div className="space-y-3.5">
               <div>
-                <strong className="text-[#7C6032]">• แบบที่ 1 ล้านนาเต็มรูปแบบ:</strong> ครบทุกขั้นตอนโบราณ ได้แก่ พิธีสวดเข้าโลง, ขันตั้ง, ตานบ้านน้อย/จองอ้อย, ตานกองทราย 108 + ท้าวทั้ง 4, สะตวงถอน, พระสวดถอน, ควักเซี่ยงเมี่ยง, ฝ้ายจูง และการจุดบั้งไฟปราสาทศพ
+                <h4 className="font-bold text-[#7C6032] text-sm mb-1">ปราสาทศพคืออะไร</h4>
+                <p>
+                  "ปราสาท" ในความหมายดั้งเดิมคือเรือนยอดแหลมเป็นชั้น ๆ ที่ใช้เป็นที่ประทับของกษัตริย์หรือประดิษฐานสิ่งศักดิ์สิทธิ์ เมื่อนำมารวมกับคำว่า "ศพ" จึงหมายถึงเรือนยอดที่สร้างขึ้นเพื่อใส่โลงบรรจุร่างผู้วายชนม์ เป็นเหมือน "ที่พักสุดท้าย" ที่ครอบครัวตั้งใจสร้างให้อย่างสวยงามและสมเกียรติ
+                </p>
               </div>
+
               <div>
-                <strong className="text-[#7C6032]">• แบบที่ 2 ล้านนาแบบย่อ:</strong> คงเอกลักษณ์พิธีล้านนาที่สำคัญครบถ้วน (ขันตั้ง, สะตวงถอน, ควักเซี่ยงเมี่ยง, ฝ้ายจูง, ต่าแหล๋ว, น้ำขมิ้นส้มป่อย) กระชับและสมเกียรติ
+                <h4 className="font-bold text-[#7C6032] text-sm mb-1">ความเชื่อที่มาของปราสาทศพ</h4>
+                <p>
+                  รากความเชื่อเรื่องปราสาทศพผสมผสานกันระหว่างสองศาสนา ฝั่งพราหมณ์-ฮินดูเชื่อเรื่องเขาพระสุเมรุ ภูเขาศักดิ์สิทธิ์ที่เป็นแกนกลางของจักรวาลและเป็นที่สถิตของเหล่าเทพ ผู้คนจึงจำลองรูปทรงนี้ขึ้นเป็น "ที่พัก" ให้ดวงวิญญาณผู้ตายได้ไปสู่สวรรค์ ส่วนฝั่งพระพุทธศาสนาจะสอดแทรกผ่านพิธีกรรมของสงฆ์ เช่น การบังสุกุลและกรวดน้ำอุทิศบุญกุศลให้ผู้ล่วงลับ ทั้งสองความเชื่อจึงหลอมรวมกันเป็นรูปแบบปราสาทศพที่เห็นในปัจจุบัน
+                </p>
               </div>
+
               <div>
-                <strong className="text-[#7C6032]">• แบบที่ 3 New Normal (พิธีกรรมเรียบง่าย):</strong> เน้นพิธีสวดพระอภิธรรม พิธีมาติกา-บังสุกุล และพิธีฌาปนกิจที่เรียบง่าย ประหยัดเวลาและค่าใช้จ่าย
+                <h4 className="font-bold text-[#7C6032] text-sm mb-1">หลักฐานทางประวัติศาสตร์</h4>
+                <p>
+                  แม้จะไม่มีหลักฐานชัดเจนว่าเริ่มสร้างปราสาทศพขึ้นเมื่อใด แต่หลักฐานเก่าแก่ที่สุดปรากฏในพงศาวดารโยนก กล่าวถึงพิธีปลงพระศพของเจ้านครพิงค์เชียงใหม่ในช่วงปลายราชวงศ์มังราย ซึ่งใช้ "วิมาน" หรือ "บุษบก" ตั้งอยู่บนหลังนกหัสดีลิงค์ขนาดใหญ่ ก่อนจะพัฒนามาเป็นต้นแบบของปราสาทศพในปัจจุบัน โดยแรกเริ่มใช้เฉพาะในพิธีของเจ้านายและพระสงฆ์ชั้นสูง ก่อนจะแพร่หลายมาสู่ชาวบ้านทั่วไปในเวลาต่อมา
+                </p>
               </div>
+
+              <div>
+                <h4 className="font-bold text-[#7C6032] text-sm mb-1">ทำไมต้องประดับด้วยดอกไม้</h4>
+                <p>
+                  พิธีศพของชาวล้านนามีจุดเด่นต่างจากภาคอื่นตรงที่นิยมประดับปราสาทด้วยดอกไม้สดหรือดอกไม้แห้งให้ดูงดงามอลังการ ความเชื่อเบื้องหลังคือการยกย่องผู้ตายให้ได้ขึ้นสู่สรวงสวรรค์ชั้นฟ้า และเป็นการแสดงออกถึงความกตัญญูกตเวทีที่ลูกหลานมีต่อผู้มีพระคุณ แม้ร่างกายจะดับสูญไปแล้ว แต่ความเคารพยังคงมอบให้อย่างเต็มที่ผ่านความประณีตของพิธีกรรม
+                </p>
+              </div>
+
+              <div>
+                <h4 className="font-bold text-[#7C6032] text-sm mb-1">โครงสร้างของปราสาทศพ</h4>
+                <p>
+                  ปราสาทศพแบบล้านนาแบ่งเป็น 3 ส่วนหลัก ได้แก่ ส่วนยอดและหลังคา ซึ่งมีทั้งทรงกระโจมและทรงจั่วตั้งแต่ชั้นเดียวถึงสามชั้น ส่วนตัวปราสาทหรือเสา และ ส่วนฐาน ที่มีทั้งแบบธรรมดา แบบย่อมุม และแบบแท่นแก้ว ความประณีตของแต่ละส่วนสะท้อนฝีมือช่างและความตั้งใจของครอบครัวผู้จัดงาน
+                </p>
+              </div>
+
+              <div>
+                <h4 className="font-bold text-[#7C6032] text-sm mb-1">จากประเพณีชุมชน สู่บริการยุคใหม่</h4>
+                <p>
+                  ในอดีตปราสาทศพเป็นสิ่งที่ญาติมิตรและชุมชนช่วยกันสร้างขึ้นด้วยแรงศรัทธา แต่เมื่อสังคมเปลี่ยนไป การจัดหาปราสาทศพก็ค่อย ๆ กลายเป็นบริการของผู้เชี่ยวชาญที่สืบทอดฝีมือกันมาหลายชั่วอายุคน เพื่อให้ครอบครัวผู้สูญเสียได้รับความสะดวก โดยยังคงไว้ซึ่งความหมายและความงดงามตามแบบแผนดั้งเดิมของล้านนาอย่างครบถ้วน
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-stone-200 text-[11px] sm:text-xs text-stone-500 bg-[#FAF6EE] p-3.5 rounded-xl border border-[#E6DAC3]">
+              <strong>อ้างอิง:</strong> พระมหาจรัญ กันธิมา (2558). ศึกษาแนวคิดเชิงวัฒนธรรมในการสร้างปราสาทศพของชาวพุทธล้านนา. วารสารพุทธศาสตร์ศึกษา ปีที่ 6 ฉบับที่ 2
             </div>
           </div>
         </div>
@@ -318,7 +352,7 @@ export default function HomePage() {
               <div className="bg-white rounded-2xl p-5 border border-stone-300 text-center shadow-sm">
                 <p className="text-xs font-semibold text-stone-600">สถานที่และศาลาพร้อมรองรับ</p>
                 <p className="text-2xl sm:text-3xl font-bold text-stone-900 mt-2">
-                  {activeLocations.length} <span className="text-sm font-medium text-stone-500">วัด</span> / {totalActivePavilions} <span className="text-sm font-medium text-stone-500">ศาลา</span>
+                  {activeLocations.length} <span className="text-sm font-medium text-stone-500">แห่ง</span> / {totalActivePavilions} <span className="text-sm font-medium text-stone-500">ศาลา</span>
                 </p>
                 <p className="text-[11px] text-stone-400 mt-1">ตรวจสอบคิวศาลาว่างได้ทันที</p>
               </div>
@@ -341,12 +375,8 @@ export default function HomePage() {
             </div>
 
             <div className="bg-white rounded-2xl p-5 border border-stone-300 shadow-sm">
-              <div className="flex items-center justify-between mb-1.5">
+              <div className="mb-1.5">
                 <h4 className="font-bold text-sm text-stone-800">แหล่งข้อมูลระบบจัดงาน</h4>
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  {supabaseConnected ? 'เชื่อมต่อฐานข้อมูล Supabase แล้ว' : 'ซิงก์ข้อมูลระบบอัตโนมัติ'}
-                </span>
               </div>
               <p className="text-xs text-stone-600">
                 แพ็กเกจยอดนิยมปัจจุบัน : <strong className="text-[#9B7B45]">{recommendedPkg?.name || '-'}</strong> (เลือกใช้สูงสุด {recommendedPkg?.bookingCount || 0} งาน)
@@ -363,34 +393,30 @@ export default function HomePage() {
               <h4 className="font-bold text-sm text-stone-800">
                 สถิติการเลือกใช้แพ็กเกจจัดงานจริง (อ้างอิงจากใบจองในระบบ)
               </h4>
-              <p className="text-xs text-stone-500 mt-0.5">
-                แพ็กเกจที่มีลูกค้าเลือกสูงสุดจะได้รับป้าย ★ แนะนำ โดยอัตโนมัติ
-              </p>
             </div>
 
-            <div className="h-48 flex items-end justify-around gap-4 px-4 pt-8 border-b border-l border-stone-300 mt-4">
+            <div className="h-52 flex items-end justify-around gap-4 px-4 pt-6 border-b border-l border-stone-300 mt-4">
               {packages.map((pkg, idx) => {
                 const count = pkg.bookingCount || 0;
-                const heightPercent = count > 0 ? Math.max(22, Math.round((count / maxPkgBookings) * 100)) : 12;
+                const heightPercent = count > 0 ? Math.max(20, Math.round((count / maxPkgBookings) * 76)) : 12;
                 const barColors = ['bg-[#2E5A44]', 'bg-[#9B7B45]', 'bg-[#65543F]', 'bg-stone-600'];
                 const barColor = pkg.isRecommended ? 'bg-[#B5945B]' : barColors[idx % barColors.length];
 
                 return (
                   <div key={pkg.id} className="flex flex-col items-center justify-end h-full flex-1">
-                    <span className={`text-[11px] font-bold mb-1.5 ${pkg.isRecommended ? 'text-[#9B7B45]' : 'text-stone-600'}`}>
+                    {pkg.isRecommended && (
+                      <span className="mb-1 text-[10px] bg-[#B5945B] text-white px-1.5 py-0.5 rounded font-bold whitespace-nowrap shadow">
+                        ★ แนะนำ
+                      </span>
+                    )}
+                    <span className={`text-[11px] font-bold mb-1 ${pkg.isRecommended ? 'text-[#9B7B45]' : 'text-stone-600'}`}>
                       {count} งาน
                     </span>
                     <div
                       style={{ height: `${heightPercent}%` }}
-                      className={`w-full max-w-[42px] ${barColor} rounded-t-md shadow-sm transition-all duration-500 relative`}
+                      className={`w-full max-w-[42px] ${barColor} rounded-t-md shadow-sm transition-all duration-500`}
                       title={`${pkg.name}: ${count} งาน`}
-                    >
-                      {pkg.isRecommended && (
-                        <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] bg-[#B5945B] text-white px-1.5 py-0.5 rounded font-bold whitespace-nowrap shadow">
-                          ★ แนะนำ
-                        </span>
-                      )}
-                    </div>
+                    />
                   </div>
                 );
               })}

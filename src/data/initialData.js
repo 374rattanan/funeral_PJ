@@ -284,7 +284,7 @@ export const buildFullScheduleItems = (pkgId) => {
           code: '1',
           name: isPkg1 || isPkg2 ? 'จัดดอกไม้แห้ง + กรอบรูป + ตกแต่งสถานที่/นิทรรศการ' : 'จัดดอกไม้สด + กรอบรูป + ตกแต่งสถานที่/นิทรรศการ',
           day1: false, night1: false, day2: true, night2: false, day3: false, night3: false, cremation: false, bone: false,
-          price: isPkg1 ? 1300 : isPkg2 ? 2100 : isPkg3 ? 6500 : 9500
+          price: isPkg1 ? 1300 : isPkg2 ? 2100 : isPkg3 ? 5000 : 8000
         },
         {
           code: '2',
@@ -1178,7 +1178,7 @@ export const createDefaultAssignmentsForBooking = (booking) => {
       currentStep: booking.status === 'กำลังดำเนินงาน' || booking.status === 'เสร็จสิ้น' ? 4 : 1,
       checklist: [
         { id: 'chk-1', label: 'จัดเตรียมหีบศพ (ฝ้าย 3 เส้น + ผ้ารอง + ผ้าห่อศพ) และโลงเย็น', isChecked: booking.status !== 'รออนุมัติ', completedTime: '10:20 น.' },
-        { id: 'chk-2', label: 'ประกอบ仪式อาบน้ำศพและบรรจุร่างลงหีบ', isChecked: booking.status !== 'รออนุมัติ', completedTime: '11:30 น.' },
+        { id: 'chk-2', label: 'ประกอบพิธีอาบน้ำศพและบรรจุร่างลงหีบ', isChecked: booking.status !== 'รออนุมัติ', completedTime: '11:30 น.' },
         { id: 'chk-3', label: 'ติดตั้งปราสาทศพและล้อลากสำหรับขบวนแห่', isChecked: booking.status !== 'รออนุมัติ', completedTime: '12:00 น.' }
       ],
       photos: booking.status !== 'รออนุมัติ' ? [SAMPLE_ONSITE_PHOTO_URL] : [],
@@ -1304,7 +1304,12 @@ export const createDefaultAssignmentsForBooking = (booking) => {
       fieldNote: '',
       completedAt: booking.status === 'เสร็จสิ้น' ? '6 ส.ค. 2569 09:00 น.' : null
     }
-  ];
+  ].map(task => ({
+    ...task,
+    bookingCode: booking.code || booking.id,
+    deceasedName: `${booking.deceased?.prefix || ''}${booking.deceased?.fullName || ''}`.trim(),
+    hostName: `${booking.contact?.prefix || ''}${booking.contact?.fullName || ''}`.trim()
+  }));
 };
 
 // ข้อมูลการจองตัวอย่าง (เพื่อให้เปิดเว็บมาทดสอบทั้ง 3 ฝั่งได้ทันที)
@@ -1386,8 +1391,8 @@ export const INITIAL_BOOKINGS = [
     durationDays: 3,
     durationNights: 2,
     baseGuests: 50,
-    extraGuests: 20,
-    totalGuests: 70,
+    extraGuests: 0,
+    totalGuests: 50,
     ritualId: 'RITUAL-03',
     ritualName: 'แบบที่ 3 New Normal (พิธีกรรมเรียบง่าย)',
     ritualUpgradePrice: 0,
