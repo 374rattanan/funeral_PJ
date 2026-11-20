@@ -5,7 +5,7 @@
 @layer base {
   body {
     font-family: 'Prompt', sans-serif;
-    background-color: #FDFBF7;
+    background-color: #FAFBFF;
     color: #2D2A26;
   }
 }
@@ -54,13 +54,15 @@
     overflow: visible !important;
   }
 
-  /* ซ่อนหน้าเว็บหลักเฉพาะตอนที่มีใบเสนอราคา A4 (#quotation-print-area) เพื่อให้หน้าอื่นพิมพ์ได้ปกติ */
-  body:has(#quotation-print-area) #root,
-  body.printing-quotation #root {
+  /* ซ่อนหน้าเว็บหลักเฉพาะตอนที่มีเอกสารพิมพ์ A4 (ใบเสนอราคา หรือ รายละเอียดแพ็กเกจ) */
+  body:has(#quotation-print-area, #package-print-area) #root,
+  body.printing-quotation #root,
+  body.printing-package #root {
     display: none !important;
   }
 
-  #quotation-print-area {
+  #quotation-print-area,
+  #package-print-area {
     display: block !important;
     width: 100% !important;
     background: #FFFFFF !important;

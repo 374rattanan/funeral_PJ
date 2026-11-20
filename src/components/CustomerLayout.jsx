@@ -134,7 +134,7 @@ export default function CustomerLayout() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#FDFBF7] text-stone-800">
+    <div className="min-h-screen flex flex-col bg-[#FAFBFF] text-stone-800">
       {/* Navbar หลัก */}
       <header className="no-print sticky top-0 z-40 bg-[#FAF6EE]/95 backdrop-blur border-b border-[#E8DEC8]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
