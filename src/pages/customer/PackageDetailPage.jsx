@@ -88,7 +88,7 @@ export default function PackageDetailPage() {
         <div className="lg:col-span-4">
           <div className="rounded-2xl overflow-hidden bg-[#FDF6E9] border border-[#E6DAC3] h-56">
             <img
-              src={pkg.coverImage}
+              src={(!pkg.coverImage || pkg.coverImage.includes('images.unsplash.com')) ? '/images/package-cover.jpg' : pkg.coverImage}
               alt={pkg.name}
               className="w-full h-full object-cover"
             />

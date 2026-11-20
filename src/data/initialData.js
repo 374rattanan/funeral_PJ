@@ -311,7 +311,7 @@ export const INITIAL_PACKAGES = [
     maxGuests: 100,
     defaultRitualId: 'RITUAL-03',
     isRecommended: false,
-    coverImage: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1000&q=80',
+    coverImage: '/images/package-cover.jpg',
     highlights: [
       'สวดพระอภิธรรม 2 คืน (3 วัน 2 คืน)',
       'รองรับแขกประมาณ 50 คน',
@@ -419,7 +419,7 @@ export const INITIAL_PACKAGES = [
     maxGuests: 150,
     defaultRitualId: 'RITUAL-03',
     isRecommended: false,
-    coverImage: 'https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=1000&q=80',
+    coverImage: '/images/package-cover.jpg',
     highlights: [
       'สวดพระอภิธรรม 2 คืน (3 วัน 2 คืน)',
       'รองรับแขกประมาณ 100 คน',
@@ -528,7 +528,7 @@ export const INITIAL_PACKAGES = [
     maxGuests: 200,
     defaultRitualId: 'RITUAL-02',
     isRecommended: true,
-    coverImage: 'https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=1000&q=80',
+    coverImage: '/images/package-cover.jpg',
     highlights: [
       'สวดพระอภิธรรม 3 คืน (4 วัน 3 คืน)',
       'รองรับแขกประมาณ 150 คน',
@@ -641,7 +641,7 @@ export const INITIAL_PACKAGES = [
     maxGuests: 300,
     defaultRitualId: 'RITUAL-01',
     isRecommended: false,
-    coverImage: 'https://images.unsplash.com/photo-1464692805480-a69dfaafdb0d?auto=format&fit=crop&w=1000&q=80',
+    coverImage: '/images/package-cover.jpg',
     highlights: [
       'สวดพระอภิธรรม 3 คืน (4 วัน 3 คืน)',
       'รองรับแขกประมาณ 200 คน',

@@ -147,6 +147,14 @@ export const AppProvider = ({ children }) => {
         if (parsed && Array.isArray(parsed.staff)) {
           parsed.staff = parsed.staff.map(s => ({ ...s, department: normalizeDepartmentName(s.department) }));
         }
+        if (parsed && Array.isArray(parsed.packages)) {
+          parsed.packages = parsed.packages.map(p => ({
+            ...p,
+            coverImage: (!p.coverImage || p.coverImage.includes('images.unsplash.com'))
+              ? '/images/package-cover.jpg'
+              : p.coverImage
+          }));
+        }
         return parsed;
       }
     } catch (e) {

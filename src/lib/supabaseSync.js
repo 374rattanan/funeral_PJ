@@ -256,7 +256,9 @@ export async function fetchAllDataFromSupabase() {
             maxGuests: Number(p.max_guests) || templatePkg.maxGuests,
             defaultRitualId: intToRitualId(p.default_ritual_id),
             isRecommended: Boolean(p.is_recommended),
-            coverImage: p.cover_image_url || templatePkg.coverImage,
+            coverImage: (!p.cover_image_url || p.cover_image_url.includes('images.unsplash.com'))
+              ? '/images/package-cover.jpg'
+              : p.cover_image_url,
             highlights: Array.isArray(extraMeta.highlights) && extraMeta.highlights.length > 0
               ? extraMeta.highlights
               : templatePkg.highlights,

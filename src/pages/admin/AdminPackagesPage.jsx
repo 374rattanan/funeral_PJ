@@ -51,7 +51,7 @@ export default function AdminPackagesPage() {
       maxGuests: 150,
       defaultRitualId: 'RITUAL-02',
       isRecommended: false,
-      coverImage: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1000&q=80',
+      coverImage: '/images/package-cover.jpg',
       highlights: [
         'สวดพระอภิธรรมครบทุกขั้นตอน',
         'รองรับแขกตามจำนวนที่กำหนด',

@@ -30,7 +30,7 @@ export default function PackagesPage() {
               className="group relative rounded-3xl overflow-hidden shadow-lg border border-stone-200 h-72 sm:h-80 bg-stone-900"
             >
               <img
-                src={pkg.coverImage}
+                src={(!pkg.coverImage || pkg.coverImage.includes('images.unsplash.com')) ? '/images/package-cover.jpg' : pkg.coverImage}
                 alt={pkg.name}
                 className="w-full h-full object-cover opacity-80 group-hover:scale-105 transition duration-500"
               />
